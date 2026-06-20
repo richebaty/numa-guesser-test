@@ -315,10 +315,15 @@
     background:linear-gradient(170deg, var(--sky1) 0%, var(--sky2) 45%, var(--sky3) 100%);
   }
   @media (min-aspect-ratio:1/1){
-    .splash-content { padding-bottom:8vh; }
+    /* PC・タブレット横：下寄せをやめ、中央寄りでバランスを取る */
+    .splash { justify-content:center; }
+    .splash-content { padding-bottom:0; transform:translateY(-4vh); }
     .sun { top:8%; width:110px; height:110px; }
     .fuji { bottom:30%; }
-    .splash h1 { font-size:46px; }
+    .splash h1 { font-size:54px; }
+    /* 写真リビールはこれまで通り大きく */
+    .photo-reveal-inner { max-width:900px; }
+    .photo-reveal img { max-height:80vh; }
   }
   .splash.hide { display:none; }
   /* sun */
@@ -604,7 +609,7 @@
       <div class="vs-box" id="hostBox" style="display:none;">
         <p>あなたのお名前（ニックネーム）</p>
         <input id="hostName" maxlength="10" placeholder="例：りいちろう" autocomplete="off">
-        <button class="btn btn-start" id="hostGoBtn" style="margin-top:4px;">待合室をつくる</button>
+        <button class="btn btn-start" id="hostGoBtn" style="margin-top:4px;">待合室を<br>つくる</button>
         <div class="vs-status" id="hostStatus"></div>
       </div>
 
