@@ -1783,7 +1783,7 @@ document.getElementById("reviewCloseBtn").onclick=closeReview;
 // 友だちに合言葉とURLを送る
 function inviteMessage(){
   const code=(roomId||document.getElementById("lobbyCode").textContent||"").trim();
-  const url="https://richebaty.github.io/numa-guesser-battle/party.html?join="+encodeURIComponent(code);
+  const url=location.origin+location.pathname+"?join="+encodeURIComponent(code);
   return `ぬまゲッサーで対戦しよう！\n↓タップして参加（あいことばは自動で入ります）\n${url}\n\n※あいことば：${code}`;
 }
 function flashShareNote(msg){
