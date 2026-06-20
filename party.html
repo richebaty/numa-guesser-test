@@ -275,7 +275,7 @@
   .takara-credit{
     position:absolute; left:0; right:0; z-index:61;
     bottom:calc(var(--safe-b) + 18px); text-align:center;
-    color:rgba(255,255,255,0.92); font-size:13px; letter-spacing:1px;
+    color:rgba(255,255,255,0.95); font-size:15px; letter-spacing:1px; font-weight:600;
     text-shadow:0 1px 4px rgba(0,0,0,0.55);
     opacity:0; transition:opacity .4s; pointer-events:none;
   }
@@ -325,6 +325,7 @@
   @media (min-aspect-ratio:1/1){
     .splash { justify-content:center; }
     .splash-content { padding-bottom:0; }
+    .takara-credit { font-size:22px; bottom:calc(var(--safe-b) + 28px); }
     .sun { top:8%; width:110px; height:110px; }
     .fuji { bottom:30%; }
     .splash h1 { font-size:50px; }
@@ -332,7 +333,7 @@
     .photo-reveal img { max-height:80vh; }
   }
   @media (min-aspect-ratio:16/10){
-    .splash-content { transform:translateY(-4vh); }
+    .splash-content { transform:translateY(-1.5vh); }
     .splash h1 { font-size:54px; }
   }
   .splash.hide { display:none; }
