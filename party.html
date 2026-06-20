@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="robots" content="noindex,nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>【テスト】ぬまゲッサー — NUMA-GUESSER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a2634;
+    --paper: #fbf7ef;
+    --sea: #2d6a8e;
+    --sea-deep: #1c4d6b;
+    --coral: #ee7a52;
+    --coral-soft: #f59b7c;
+    --gold: #e0b94a;
+    --sky1: #ffd6a5;
+    --sky2: #a8d8ea;
+    --sky3: #6fb3d2;
+    --fog: rgba(251,247,239,0.94);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overscroll-behavior:none; }
+  body {
+    font-family:"BIZ UDPGothic","UD デジタル 教科書体 NK-R","Meiryo","メイリオ","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--ink); color:var(--paper);
+    overflow:hidden;
+  }
+  #app { position:fixed; inset:0; }
+  /* ===== 対戦版 追加スタイル ===== */
+  .mode-row { display:flex; gap:10px; margin:14px 0 4px; }
+  .mode-btn {
+    flex:1; padding:13px 6px; border:none; border-radius:14px; cursor:pointer;
+    font-family:inherit; font-size:14.5px; font-weight:bold; color:var(--ink);
+    background:var(--paper); box-shadow:0 3px 0 rgba(0,0,0,0.18); transition:transform .1s;
+    white-space:nowrap; line-height:1.35; text-align:center;
+  }
+  .mode-btn:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,0.18); }
+  .mode-btn.sub { background:var(--sky2); }
+  .vs-box {
+    margin:10px auto 0; max-width:300px; background:var(--fog); color:var(--ink);
+    border-radius:16px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.25);
+  }
+  .vs-box p { font-size:13px; line-height:1.6; margin:6px 0; }
+  .vs-box input {
+    width:100%; padding:11px; font-size:18px; text-align:center; letter-spacing:3px;
+    border:2px solid var(--sea); border-radius:10px; font-family:inherit; text-transform:uppercase;
+    margin:8px 0; background:#fff; color:var(--ink);
+  }
+  .room-code {
+    font-size:30px; font-weight:bold; letter-spacing:6px; color:var(--sea-deep);
+    text-align:center; margin:8px 0; user-select:all;
+  }
+  .vs-status { font-size:13px; color:var(--sea-deep); text-align:center; margin-top:6px; min-height:18px; }
+  /* 対戦中の相手スコア表示 */
+  .oppbar {
+    position:absolute; top:calc(var(--safe-t) + 14px); left:50%; transform:translateX(-50%);
+    z-index:30; display:none; gap:18px; align-items:center;
+    background:var(--fog); color:var(--ink); border-radius:999px;
+    padding:7px 18px; box-shadow:0 4px 14px rgba(0,0,0,0.25); font-size:13px; white-space:nowrap;
+  }
+  .oppbar .me  { color:var(--coral); font-weight:bold; }
+  .oppbar .opp { color:var(--sea); font-weight:bold; }
+  .oppbar .sep { opacity:0.5; }
+  .wait-overlay {
+    position:absolute; inset:0; z-index:60; display:none;
+    align-items:center; justify-content:center; flex-direction:column;
+    background:rgba(26,38,52,0.82); color:var(--paper); text-align:center; padding:30px;
+  }
+  .wait-overlay.show { display:flex; }
+  .wait-overlay .spin {
+    width:46px; height:46px; border:5px solid rgba(251,247,239,0.3);
+    border-top-color:var(--coral); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:18px;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .result-vs { font-size:14px; color:var(--sea-deep); margin:6px 0 2px; min-height:20px; font-weight:bold; }
+  .final-verdict { font-size:26px; font-weight:bold; margin:4px 0 10px; }
+  .final-verdict.win  { color:var(--coral); }
+  .final-verdict.lose { color:var(--sea); }
+  .final-verdict.draw { color:var(--gold); }
+  .best-row { font-size:15px; color:var(--sea-deep); margin:-6px 0 14px; font-weight:bold; }
+  .best-row.newbest { color:var(--coral); }
+  .best-row .badge { display:inline-block; background:var(--coral); color:#fff; border-radius:999px; padding:2px 10px; font-size:12px; margin-left:6px; }
+  /* 待合室・順位表 */
+  .lobby-code-wrap { margin:10px 0 14px; }
+  .mini-info {
+    margin:14px 0; padding:14px 14px 10px; border-radius:16px;
+    background:linear-gradient(170deg, #eaf3f7, #f5efe2);
+    border:1px solid rgba(45,106,142,0.15); text-align:center;
+  }
+  .mini-head { font-size:12px; font-weight:700; color:var(--sea-deep); margin-bottom:8px; letter-spacing:1px; }
+  .mini-page { font-weight:400; opacity:0.7; margin-left:4px; }
+  .mini-art { width:100%; height:120px; display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+  .mini-art svg { width:auto; height:120px; max-width:100%; }
+  .mini-title { font-size:15px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .mini-text { font-size:12.5px; line-height:1.7; color:var(--ink); text-align:left; min-height:66px; }
+  .mini-nav { display:flex; justify-content:space-between; margin-top:6px; }
+  .mini-btn {
+    font-family:inherit; cursor:pointer; border:none; background:rgba(45,106,142,0.12);
+    color:var(--sea-deep); font-size:18px; font-weight:700; width:38px; height:30px; border-radius:8px;
+  }
+  .mini-btn:active { transform:scale(.95); }
+  .lobby-count { font-size:14px; font-weight:bold; color:var(--sea-deep); margin:6px 0; }
+  .lobby-list { max-height:180px; overflow-y:auto; margin:8px auto; max-width:280px; text-align:left; }
+  .lobby-list .row { padding:7px 12px; margin:4px 0; background:var(--fog); border-radius:10px; font-size:15px; color:var(--ink); }
+  .lobby-list .row.you { background:var(--sky2); font-weight:bold; }
+  .final-board { max-height:240px; overflow-y:auto; margin:6px auto 12px; max-width:300px; text-align:left; font-size:15px; line-height:1.8; }
+  .result-vs { text-align:left; }
+
+  /* ===== Street View ===== */
+  #pano { position:absolute; inset:0; background:#0d1620; }
+
+  /* ===== Top bar ===== */
+  .topbar {
+    position:absolute; top:0; left:0; right:0; z-index:30;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:calc(10px + var(--safe-t)) 16px 10px;
+    background:linear-gradient(180deg, rgba(13,22,32,0.8), transparent);
+    pointer-events:none;
+  }
+  .brand .jp {
+    font-size:19px; letter-spacing:2px; font-weight:700;
+    text-shadow:0 2px 8px rgba(0,0,0,0.6);
+  }
+  .brand .en {
+    font-family:"Helvetica Neue",sans-serif; font-size:8px;
+    letter-spacing:3px; color:var(--gold); margin-top:1px;
+  }
+  .scorebox {
+    text-align:right; background:rgba(13,22,32,0.5);
+    padding:6px 12px; border:1px solid rgba(224,185,74,0.4);
+    border-radius:12px; backdrop-filter:blur(6px);
+  }
+  .scorebox .label { font-size:8px; letter-spacing:2px; color:var(--gold); }
+  .scorebox .val { font-size:18px; font-family:"Helvetica Neue",sans-serif; font-weight:700; line-height:1.1; }
+  .scorebox .round { font-size:9px; color:rgba(251,247,239,0.65); }
+
+  /* ===== Timer ===== */
+  .timer {
+    position:absolute; z-index:28; top:calc(58px + var(--safe-t)); left:50%;
+    transform:translateX(-50%);
+    background:rgba(13,22,32,0.6); backdrop-filter:blur(6px);
+    border:2px solid var(--gold); border-radius:24px;
+    padding:6px 20px; display:flex; align-items:baseline; gap:3px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+    transition:border-color .3s, transform .15s;
+    pointer-events:none;
+  }
+  .timer #timerNum { font-family:"Helvetica Neue",sans-serif; font-size:26px; font-weight:700; line-height:1; }
+  .timer .timer-unit { font-size:12px; color:rgba(251,247,239,0.7); }
+  .timer.warn { border-color:var(--coral); animation:tick .5s ease-in-out infinite; }
+  @keyframes tick { 0%,100%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.1)} }
+
+  /* ===== Mini-map (PC: 常設・右下) ===== */
+  #guesspanel {
+    position:absolute; right:22px; bottom:22px; z-index:25;
+    background:var(--paper);
+    border-radius:14px;
+    box-shadow:0 10px 34px rgba(0,0,0,0.45);
+    overflow:hidden;
+    width:340px;
+    transition:width .35s ease, height .35s ease;
+  }
+  #guesspanel.expanded { width:min(560px,46vw); }
+  .handle-row {
+    height:40px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px; cursor:pointer;
+    background:var(--sea-deep); color:#fff;
+  }
+  .handle-label { font-size:12px; letter-spacing:2px; font-weight:700; }
+  .handle-expand { font-size:16px; opacity:.85; }
+  #map { width:100%; height:240px; background:#dde6ea; transition:height .35s ease; }
+  #guesspanel.expanded #map { height:min(54vh,440px); }
+  .panel-actions { padding:12px 14px; }
+
+  .btn {
+    font-family:inherit; cursor:pointer; border:none;
+    border-radius:12px; font-weight:700;
+    transition:transform .12s, box-shadow .15s, opacity .2s;
+  }
+  .btn:active { transform:scale(.98); }
+  .btn-guess {
+    width:100%; background:var(--coral); color:#fff;
+    font-size:16px; letter-spacing:3px; padding:13px;
+    box-shadow:0 5px 16px rgba(238,122,82,0.5);
+  }
+  .btn-guess:disabled { opacity:.45; box-shadow:none; }
+  .btn-ghost {
+    width:100%; background:transparent; color:var(--sea-deep);
+    font-size:15px; letter-spacing:2px; padding:11px;
+    border:2px solid var(--sea-deep);
+  }
+  .btn-ghost:active { transform:scale(.98); }
+  .share-row { display:flex; gap:8px; justify-content:center; margin-top:12px; }
+  .btn-share {
+    background:var(--sea-deep); color:#fff; font-size:14px; letter-spacing:1px;
+    padding:9px 16px; border-radius:10px;
+  }
+  .btn-share.ghost { background:transparent; color:var(--sea-deep); border:2px solid var(--sea-deep); }
+  .share-note { font-size:12px; color:var(--coral); margin-top:8px; min-height:16px; font-weight:bold; }
+
+  /* ===== Overlays ===== */
+  .overlay {
+    position:absolute; inset:0; z-index:50;
+    background:var(--fog); display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px); color:var(--ink); padding:16px 20px;
+    overflow-y:auto;
+  }
+  .overlay.show { display:flex; animation:fade .45s ease; }
+  @keyframes fade { from{opacity:0; transform:scale(.98)} to{opacity:1; transform:scale(1)} }
+
+  .panel {
+    background:var(--paper); border-radius:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+    padding:78px 26px 26px; max-width:440px; width:100%;
+    text-align:center; position:relative;
+    border:1px solid rgba(224,185,74,0.35);
+    margin:auto;
+  }
+  .panel .seal {
+    position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    width:50px; height:50px; border-radius:50%;
+    background:var(--coral); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:21px; box-shadow:0 6px 14px rgba(238,122,82,0.45);
+    border:3px solid var(--paper);
+  }
+  .panel h2 { font-size:25px; letter-spacing:3px; margin:0 0 3px; }
+  .panel .sub { font-size:10px; color:var(--sea); letter-spacing:3px; margin-bottom:18px; }
+  .resultmap { width:100%; height:min(46vh,460px); border-radius:14px; overflow:hidden; margin-bottom:14px; background:#dde6ea; }
+  .review-q { margin:0 0 20px; }
+  .review-q h3 { font-size:16px; color:var(--sea-deep); margin:0 0 6px; text-align:left; }
+  .review-q .qmap { width:100%; height:230px; border-radius:12px; overflow:hidden; background:#dde6ea; }
+  .review-legend { font-size:12px; color:var(--ink); text-align:left; margin:6px 2px 0; line-height:1.7; }
+  .review-legend .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; vertical-align:middle; }
+  .stat-row { display:flex; justify-content:space-around; margin-bottom:16px; }
+  .stat .n { font-size:26px; font-weight:700; font-family:"Helvetica Neue",sans-serif; color:var(--sea-deep); }
+  .stat .l { font-size:10px; letter-spacing:2px; color:rgba(26,38,52,0.55); }
+  .placename { font-size:14px; letter-spacing:1px; margin-bottom:10px; color:var(--sea-deep); }
+  .takara-note {
+    font-size:12.5px; line-height:1.7; color:var(--ink); text-align:left;
+    background:linear-gradient(170deg,#fff6e8,#eaf3f7); border:1px solid rgba(224,185,74,0.5);
+    border-radius:12px; padding:10px 12px; margin:0 0 14px;
+  }
+  .takara-note .badge { display:inline-block; background:var(--gold); color:#5a4a1a; font-weight:700;
+    border-radius:999px; padding:1px 10px; font-size:11px; margin-bottom:5px; }
+  ruby rt { font-size:0.5em; color:inherit; opacity:0.85; font-weight:400; }
+
+  /* ===== 宝100選 正解写真リビール ===== */
+  .photo-reveal {
+    position:absolute; inset:0; z-index:55; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(13,22,32,0.94); padding:24px; cursor:pointer;
+    opacity:0; transition:opacity .35s;
+  }
+  .photo-reveal.show { display:flex; opacity:1; }
+  .photo-reveal-inner {
+    width:100%; max-width:560px; display:flex; flex-direction:column; align-items:center;
+    animation:photoIn .45s ease;
+  }
+  @keyframes photoIn { from{transform:scale(0.92); opacity:0} to{transform:scale(1); opacity:1} }
+  .photo-reveal img {
+    width:100%; max-height:62vh; object-fit:contain; border-radius:14px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.55); background:#0d1620;
+  }
+  .photo-reveal-cap {
+    margin-top:16px; color:var(--paper); font-size:19px; font-weight:700;
+    text-align:center; line-height:1.5; letter-spacing:0.5px;
+  }
+  .photo-reveal-cap .pno {
+    display:inline-block; background:var(--gold); color:#5a4a1a; font-weight:700;
+    border-radius:999px; padding:2px 12px; font-size:14px; margin-right:8px; vertical-align:middle;
+  }
+  .photo-reveal-tap {
+    position:absolute; bottom:calc(var(--safe-b) + 22px); left:50%; transform:translateX(-50%);
+    color:rgba(251,247,239,0.7); font-size:12px; letter-spacing:1px;
+    animation:tapPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes tapPulse { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
+
+  .play-hint {
+    position:absolute; left:50%; transform:translateX(-50%);
+    top:calc(var(--safe-t) + 60px); z-index:40;
+    background:rgba(26,38,52,0.86); color:var(--paper);
+    padding:10px 18px; border-radius:999px; font-size:13px; line-height:1.5;
+    max-width:84%; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.3);
+    opacity:0; pointer-events:none; transition:opacity .5s;
+  }
+  .play-hint.show { opacity:1; }
+  .tanka { font-size:13px; color:var(--sea); margin-bottom:20px; line-height:2; white-space:pre-line; }
+
+  /* ===== Splash (cute) ===== */
+  .splash {
+    position:absolute; inset:0; z-index:60; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    text-align:center;
+    background:linear-gradient(170deg, var(--sky1) 0%, var(--sky2) 45%, var(--sky3) 100%);
+  }
+  @media (min-aspect-ratio:1/1){
+    .splash-content { padding-bottom:8vh; }
+    .sun { top:8%; width:110px; height:110px; }
+    .fuji { bottom:30%; }
+    .splash h1 { font-size:46px; }
+  }
+  .splash.hide { display:none; }
+  /* sun */
+  .sun {
+    position:absolute; top:11%; left:24%; transform:translateX(-50%);
+    width:90px; height:90px; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, #fff3d6, #ffd98a 70%, #ffcf6e);
+    box-shadow:0 0 60px 18px rgba(255,221,150,0.6);
+    animation:floaty 5s ease-in-out infinite;
+  }
+  @keyframes floaty { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-10px)} }
+  /* Mt Fuji */
+  .fuji {
+    position:absolute; bottom:24%; left:26%; transform:translateX(-50%);
+    width:0; height:0; border-left:185px solid transparent;
+    border-right:185px solid transparent; border-bottom:210px solid #5a7d97;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,0.12));
+  }
+  .fuji::after {
+    content:""; position:absolute; left:-64px; top:0; width:128px; height:64px;
+    background:#fbf7ef; clip-path:polygon(50% 0, 78% 60%, 62% 48%, 50% 70%, 38% 48%, 22% 60%);
+  }
+  /* 沼津港のシンボル「びゅうお」水門（右側）。両側の塔＋上部の展望回廊。 */
+  .byuo {
+    position:absolute; right:14%; bottom:24%; width:96px; height:118px;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,0.12)); z-index:2;
+  }
+  .byuo .tower {
+    position:absolute; bottom:0; width:20px; height:100px; background:#fbf7ef; border:1.5px solid #9bb0bd; border-radius:3px 3px 0 0;
+  }
+  .byuo .tower.l { left:8px; }
+  .byuo .tower.r { right:8px; }
+  .byuo .deck {
+    position:absolute; top:8px; left:0; right:0; height:20px;
+    background:#ffffff; border:2px solid #9bb0bd; border-radius:4px;
+  }
+  .byuo .deck::after { /* 展望回廊の窓 */
+    content:""; position:absolute; top:6px; left:10px; right:10px; height:6px;
+    background:repeating-linear-gradient(90deg,#9bb0bd 0 6px,transparent 6px 11px);
+  }
+  .byuo .gate { /* 水門の扉体 */
+    position:absolute; bottom:0; left:8px; right:8px; height:34px;
+    background:#f3f1ec; border:2px solid #9bb0bd; border-bottom:none;
+  }
+  /* 港の街並みシルエット（びゅうおの足元） */
+  .town {
+    position:absolute; right:2%; bottom:27%; display:flex; align-items:flex-end; gap:3px; z-index:1; opacity:.92;
+  }
+  .town span { display:block; width:14px; background:#6c8597; border-radius:2px 2px 0 0; }
+  .town .b1{height:26px;} .town .b2{height:38px;} .town .b3{height:20px;}
+  .town .b4{height:32px;width:18px;} .town .b5{height:16px;}
+  /* sea */
+  .sea-band {
+    position:absolute; bottom:0; left:0; right:0; height:30%;
+    background:linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
+  }
+  .wave {
+    position:absolute; left:0; right:0; height:22px;
+    background:radial-gradient(circle at 12px -6px, transparent 12px, var(--paper) 13px) repeat-x;
+    background-size:24px 22px; opacity:.25;
+  }
+  .wave.w1 { bottom:28%; animation:drift 6s linear infinite; }
+  .wave.w2 { bottom:24%; opacity:.15; animation:drift 9s linear infinite reverse; }
+  @keyframes drift { from{background-position:0 0} to{background-position:48px 0} }
+  /* little boat */
+  .boat { position:absolute; bottom:20%; font-size:30px; animation:sail 8s ease-in-out infinite; }
+  @keyframes sail { 0%{left:-12%} 100%{left:108%} }
+  /* pine */
+  .pine { position:absolute; bottom:27%; font-size:34px; filter:drop-shadow(0 4px 4px rgba(0,0,0,.15)); }
+  .pine.p1 { left:10%; } .pine.p2 { right:2%; font-size:24px; bottom:24%; }
+
+  .splash-content {
+    position:relative; z-index:5; width:100%;
+    padding:0 24px calc(46px + var(--safe-b));
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .title-card {
+    background:rgba(251,247,239,0.85); backdrop-filter:blur(8px);
+    border-radius:26px; padding:22px 30px 24px;
+    box-shadow:0 12px 36px rgba(28,77,107,0.25);
+    border:2px solid #fff; margin-bottom:22px;
+  }
+  .splash h1 {
+    font-family:"BIZ UDPGothic","UD デジタル 教科書体 NK-B","Meiryo","メイリオ","Yu Gothic",sans-serif;
+    font-size:36px; letter-spacing:2px; color:var(--coral);
+    font-weight:700; white-space:nowrap;
+    text-shadow:2px 2px 0 #fff, 4px 4px 0 rgba(45,106,142,0.25);
+  }
+  .splash h1 .star { color:var(--gold); display:inline-block; animation:twinkle 1.6s ease-in-out infinite; }
+  .splash h1 .pty { color:var(--sea); }
+  @keyframes twinkle { 0%,100%{transform:rotate(0) scale(1); opacity:1;} 50%{transform:rotate(20deg) scale(1.25); opacity:.85;} }
+  .splash .tag {
+    font-family:"Helvetica Neue",sans-serif; font-size:10px;
+    letter-spacing:5px; color:var(--coral); margin-top:6px; font-weight:700;
+  }
+  .splash .lead {
+    font-size:13px; line-height:1.9; color:var(--sea-deep);
+    margin-top:12px; font-weight:600;
+  }
+  .period {
+    font-size:11px; letter-spacing:1px; color:var(--sea-deep);
+    background:rgba(255,255,255,0.7); padding:5px 14px; border-radius:20px;
+    margin-bottom:16px; font-weight:700;
+  }
+  .diff-card {
+    margin-top:16px; background:rgba(255,255,255,0.82);
+    border-radius:18px; padding:12px 16px; backdrop-filter:blur(2px);
+    box-shadow:0 4px 14px rgba(45,106,142,0.15);
+  }
+  .diff-row { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .diff-label { font-size:12px; color:var(--sea-deep); font-weight:700; margin-right:2px; }
+  .diff-btn {
+    font-family:inherit; cursor:pointer; border:2px solid var(--sea-deep);
+    background:transparent; color:var(--sea-deep); font-weight:700;
+    font-size:13px; padding:6px 14px; border-radius:20px; transition:all .15s;
+  }
+  .diff-btn.active { background:var(--sea-deep); color:#fff; }
+  .diff-note {
+    font-size:11px; color:var(--ink); opacity:0.8; margin-top:8px; text-align:center;
+  }
+  .btn-start {
+    background:var(--coral); color:#fff; font-size:19px;
+    letter-spacing:5px; padding:17px 56px; border-radius:30px;
+    box-shadow:0 8px 22px rgba(238,122,82,0.55);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+  .loading { color:var(--sea-deep); font-size:12px; letter-spacing:2px; margin-top:16px; min-height:18px; font-weight:700; }
+
+  /* closed screen reuse splash bg but center */
+  #closedScreen { justify-content:center; }
+  #closedScreen .title-card { margin-bottom:0; }
+</style>
+<!-- Firebase (対戦機能用) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div id="app">
+  <div id="pano"></div>
+  <div class="oppbar" id="oppbar">
+    <span class="me">あなた <b id="oppbarMe">0</b></span>
+    <span class="sep">—</span>
+    <span class="opp">あいて <b id="oppbarOpp">0</b></span>
+  </div>
+  <div class="wait-overlay" id="waitOverlay">
+    <div class="spin"></div>
+    <div id="waitMsg">あいての こたえを まっています…</div>
+  </div>
+  <div class="play-hint" id="playHint">
+    <span>けしきは 指で ぐるぐる まわせるよ。地図を タップして、ばしょを きめてね。</span>
+  </div>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="jp">ぬまゲッサー</div>
+      <div class="en">NUMA-GUESSER</div>
+    </div>
+    <div class="scorebox">
+      <div class="label">合計</div>
+      <div class="val" id="totalScore">0</div>
+      <div class="round" id="roundLabel">第1問 / 全5問</div>
+    </div>
+  </div>
+
+  <div class="timer" id="timer" style="display:none;"><span id="timerNum">30</span><span class="timer-unit">秒</span></div>
+
+  <!-- Mini-map (PC) -->
+  <div id="guesspanel">
+    <div class="handle-row" id="handleRow">
+      <span class="handle-label" id="handleLabel">地図でこたえる</span>
+      <span class="handle-expand" id="expandIcon">⤢</span>
+    </div>
+    <div id="map"></div>
+    <div class="panel-actions">
+      <button class="btn btn-guess" id="guessBtn" disabled>ここだ！</button>
+    </div>
+  </div>
+
+  <!-- 宝100選 正解写真（回答後・結果の直前に数秒表示） -->
+  <div class="photo-reveal" id="photoReveal">
+    <div class="photo-reveal-inner">
+      <img id="photoRevealImg" alt="">
+      <div class="photo-reveal-cap" id="photoRevealCap"></div>
+    </div>
+    <div class="photo-reveal-tap">タップで すすむ</div>
+  </div>
+
+  <!-- Round result -->
+  <div class="overlay" id="resultOverlay">
+    <div class="panel">
+      <div class="seal">答</div>
+      <h2 id="resultTitle">お見事</h2>
+      <div class="sub">RESULT</div>
+      <div class="resultmap" id="resultMap"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="distVal">—</div><div class="l">きょり</div></div>
+        <div class="stat"><div class="n" id="ptsVal">—</div><div class="l"><ruby>獲得点<rt>かくとくてん</rt></ruby></div></div>
+      </div>
+      <div class="placename" id="placeName">— 沼津市 —</div>
+      <div class="takara-note" id="takaraNote" style="display:none;"></div>
+      <div class="result-vs" id="resultVs"></div>
+      <button class="btn btn-guess" id="nextBtn">次の問題へ →</button>
+    </div>
+  </div>
+
+  <!-- Final -->
+  <div class="overlay" id="finalOverlay">
+    <div class="panel">
+      <div class="seal">祝</div>
+      <h2>終了！ <ruby>結果<rt>けっか</rt></ruby></h2>
+      <div class="sub" style="margin-top:-2px;">おつかれさま！</div>
+      <div class="final-verdict" id="finalVerdict" style="display:none;"></div>
+      <div class="stat-row" style="margin:26px 0;">
+        <div class="stat"><div class="n" id="finalScore">0</div><div class="l">合計 / 25000</div></div>
+        <div class="stat"><div class="n" id="finalRank">—</div><div class="l"><ruby>称号<rt>しょうごう</rt></ruby></div></div>
+      </div>
+      <div class="stat-row" id="finalVsRow" style="display:none; margin:-10px 0 18px;">
+        <div class="stat"><div class="n" id="finalOpp">0</div><div class="l">あいての合計</div></div>
+      </div>
+      <div class="final-board" id="finalBoard" style="display:none;"></div>
+      <div class="best-row" id="bestRow" style="display:none;">
+        <span id="bestText"></span>
+      </div>
+      <div class="tanka" id="finalTanka"></div>
+      <button class="btn btn-guess" id="reviewBtn" style="display:none; margin-bottom:10px;">ふりかえりを見る 🗺️</button>
+      <button class="btn btn-guess" id="restartBtn">もう一回 ↺</button>
+      <button class="btn btn-ghost" id="homeBtn" style="margin-top:10px;">ホームへ ⌂</button>
+    </div>
+  </div>
+
+  <!-- ふりかえり（対戦のあと：全5問の正解とみんなの回答地点） -->
+  <div class="overlay" id="reviewOverlay">
+    <div class="panel" style="max-width:480px;">
+      <h2>ふりかえり</h2>
+      <div class="sub" style="margin-top:-2px;">せいかいと みんなの こたえ</div>
+      <div id="reviewList" style="margin-top:14px;"></div>
+      <button class="btn btn-guess" id="reviewCloseBtn" style="margin-top:6px;">結果に もどる ↩</button>
+    </div>
+  </div>
+
+  <!-- Splash -->
+  <div class="splash" id="splash">
+    <div class="sun"></div>
+    <div class="fuji"></div>
+    <div class="town"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
+    <div class="byuo">
+      <div class="tower l"></div>
+      <div class="tower r"></div>
+      <div class="gate"></div>
+      <div class="deck"></div>
+    </div>
+    <div class="pine p1">🌲</div>
+    <div class="pine p2">🌲</div>
+    <div class="sea-band"></div>
+    <div class="wave w1"></div>
+    <div class="wave w2"></div>
+    <div class="boat">⛵</div>
+    <div class="splash-content">
+      <div class="title-card">
+        <h1>ぬまゲッサー</h1>
+        <div class="tag">GUESS WHERE IN NUMAZU</div>
+        <div class="lead">沼津のまちの どこかに とうじょう。<br>けしきを ヒントに、ばしょを あててね。</div>
+      </div>
+      <div class="period" id="periodNote"></div>
+      <button class="btn btn-start" id="startBtn">ひとりであそぶ</button>
+      <div class="mode-row">
+        <button class="mode-btn" id="createBtn">みんなであそぶ<br>（主催）</button>
+        <button class="mode-btn sub" id="joinBtn">あいことばで<br>参加</button>
+      </div>
+      <div class="diff-card">
+        <div class="diff-row">
+          <span class="diff-label">モード</span>
+          <button class="diff-btn active" id="diffEasy">やさしい</button>
+          <button class="diff-btn" id="diffHard">むずかしい</button>
+          <button class="diff-btn" id="diffTakara">ぬまづの宝100選</button>
+        </div>
+        <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
+      </div>
+
+      <!-- 主催者：待合室を作る -->
+      <div class="vs-box" id="hostBox" style="display:none;">
+        <p>あなたのお名前（ニックネーム）</p>
+        <input id="hostName" maxlength="10" placeholder="例：りいちろう" autocomplete="off">
+        <button class="btn btn-start" id="hostGoBtn" style="margin-top:4px;">待合室をつくる</button>
+        <div class="vs-status" id="hostStatus"></div>
+      </div>
+
+      <!-- 参加者：あいことばで入る -->
+      <div class="vs-box" id="joinBox" style="display:none;">
+        <p>お名前（ニックネーム）</p>
+        <input id="joinName" maxlength="10" placeholder="例：はなこ" autocomplete="off">
+        <p style="margin-top:8px;">あいことば（4文字）</p>
+        <input id="roomCodeInput" maxlength="4" placeholder="____" autocomplete="off">
+        <button class="btn btn-start" id="joinGoBtn" style="margin-top:4px;">入る</button>
+        <div class="vs-status" id="joinStatus"></div>
+      </div>
+      <div class="loading" id="loadMsg"></div>
+    </div>
+  </div>
+
+  <!-- 待合室（ロビー） -->
+  <div class="overlay" id="lobbyOverlay">
+    <div class="panel">
+      <div class="seal">集</div>
+      <h2><ruby>待合室<rt>まちあいしつ</rt></ruby></h2>
+      <div class="sub">WAITING ROOM</div>
+      <div class="lobby-code-wrap">
+        <div style="font-size:13px;color:var(--sea-deep);">あいことば</div>
+        <div class="room-code" id="lobbyCode">----</div>
+        <div style="font-size:12px;color:var(--ink);opacity:0.7;">この4文字を みんなに伝えてください</div>
+        <div class="share-row">
+          <button class="btn btn-share" id="shareBtn">友だちに送る ✉</button>
+          <button class="btn btn-share ghost" id="copyBtn">コピー ⧉</button>
+        </div>
+        <div class="share-note" id="shareNote"></div>
+      </div>
+      <div class="lobby-count" id="lobbyCount">参加者：0人</div>
+      <div class="lobby-list" id="lobbyList"></div>
+
+      <!-- 待ち時間に流れる沼津のミニ情報 -->
+      <div class="mini-info" id="miniInfo">
+        <div class="mini-head">沼津の ミニ情報 <span class="mini-page" id="miniPage"></span></div>
+        <div class="mini-art" id="miniArt"></div>
+        <div class="mini-title" id="miniTitle"></div>
+        <div class="mini-text" id="miniText"></div>
+        <div class="mini-nav">
+          <button class="mini-btn" id="miniPrev">‹</button>
+          <button class="mini-btn" id="miniNext">›</button>
+        </div>
+      </div>
+
+      <button class="btn btn-guess" id="lobbyStartBtn" style="display:none;">全員そろった！ はじめる →</button>
+      <div class="vs-status" id="lobbyWaitMsg">主催者が はじめるのを まっています…</div>
+    </div>
+  </div>
+
+  <!-- Closed -->
+  <div class="splash hide" id="closedScreen">
+    <div class="sun"></div>
+    <div class="fuji"></div>
+    <div class="sea-band"></div>
+    <div class="wave w1"></div>
+    <div class="splash-content">
+      <div class="title-card">
+        <h1 style="font-size:26px;">公開は終了しました</h1>
+        <div class="tag">THANK YOU FOR PLAYING</div>
+        <div class="lead">たくさんの ごさんか<br>ありがとうございました。<br>また 沼津の まちで あいましょう。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ▼▼▼ 運用設定（書き換えるのはこの2つだけ） ▼▼▼
+// ============================================================
+//  ■ 公開終了日：掲載日の2週間後に。形式 "西暦-月-日"（2桁）
+const PUBLISH_END_DATE = "2026-08-28";
+//  ■ APIキー：Google Cloud のキーを貼り付け
+const EMBEDDED_API_KEY = "AIzaSyCL4nlsFMiGZzDOgcJd-_Ioj-rFu_Uz4KQ";
+//  ■ 宝100選の正解写真：images/ フォルダに 001.jpg〜100.jpg を置く
+//    （写真が無い地点は自動でスキップします）
+const TAKARA_PHOTO_DIR  = "images/";   // 画像フォルダ名
+const TAKARA_PHOTO_SECS = 3;           // 写真を映す秒数（タップでスキップ可）
+// ============================================================
+//  ▲▲▲ 設定はここまで ▲▲▲
+// ============================================================
+
+//  ■ Firebase（対戦機能用）設定
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBhrLOBwg_sLZHw3z3M0m0eRqJ41uhDARU",
+  authDomain: "numa-guesser-battle.firebaseapp.com",
+  databaseURL: "https://numa-guesser-battle-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "numa-guesser-battle",
+  storageBucket: "numa-guesser-battle.firebasestorage.app",
+  messagingSenderId: "770531128227",
+  appId: "1:770531128227:web:203628a24ad8d392796016"
+};
+
+// ===== 対戦モード用の状態（最大8人・待合室つき） =====
+const MAX_PLAYERS = 8;
+const SYNC_TIMEOUT_MS = 15000; // 誰かが止まっても、この時間で次へ進む保険
+let fbDB=null;            // Firebase Realtime Database
+let isVersus=false;      // 対戦モードか
+let isHost=false;        // 待合室を作った主催者か
+let roomId=null;         // あいことば
+let roomRef=null;        // 部屋への参照
+let myId=null;           // 自分のプレイヤーID（自動採番）
+let myName="";           // 自分のニックネーム
+let playersCache={};     // 全プレイヤーの最新状態 {id:{name,total,round,ready,alive}}
+let lobbyReady=false;    // 主催者がスタートを押したか
+let syncTimer=null;      // 待ち合わせのタイムアウト用
+let sharedPanos=null;    // 主催者が用意した5問ぶんの風景（全員共通）
+
+const NUMAZU = { center:{lat:35.0960, lng:138.8634} };
+// 各地区の代表地点。r = 探索半径(m)。郊外・海岸部はストリートビューが
+// 少ないため広めに設定。jit = ランダムにずらす範囲(度)。
+const NUMAZU_ANCHORS = [
+  // --- 中心市街地 ---
+  {lat:35.1009, lng:138.8634, name:"沼津駅周辺", yomi:"ぬまづえき しゅうへん", r:400, jit:0.010, easy:true},
+  {lat:35.0980, lng:138.8540, name:"あゆみ橋・狩野川沿い", yomi:"あゆみばし・かのがわ ぞい", r:400, jit:0.010, easy:true},
+  {lat:35.1100, lng:138.8720, name:"大手町・上土町", yomi:"おおてまち・あげつちちょう", r:400, jit:0.010, easy:true},
+  {lat:35.0900, lng:138.8800, name:"三枚橋・添地町", yomi:"さんまいばし・そえちちょう", r:500, jit:0.012, easy:true},
+  {lat:35.1180, lng:138.8580, name:"高島町・五月町", yomi:"たかしまちょう・さつきちょう", r:500, jit:0.012, easy:true},
+  // --- 港・千本 ---
+  {lat:35.0875, lng:138.8489, name:"沼津港・千本港町", yomi:"ぬまづこう・せんぼんみなとちょう", r:400, jit:0.010, easy:true},
+  {lat:35.0833, lng:138.8350, name:"千本松原", yomi:"せんぼんまつばら", r:600, jit:0.014, easy:true},
+  {lat:35.1050, lng:138.8450, name:"片浜・松長", yomi:"かたはま・まつなが", r:600, jit:0.014, easy:true},
+  // --- 北部 ---
+  {lat:35.1250, lng:138.8900, name:"岡宮・東熊堂", yomi:"おかみや・ひがしくまんどう", r:600, jit:0.014, easy:true},
+  {lat:35.1400, lng:138.8650, name:"愛鷹・東椎路", yomi:"あしたか・ひがししいじ", r:800, jit:0.016, easy:false},
+  // --- 西部平野 ---
+  {lat:35.1080, lng:138.8100, name:"原地区", yomi:"はら ちく", r:800, jit:0.016, easy:false},
+  {lat:35.1300, lng:138.8000, name:"浮島地区", yomi:"うきしま ちく", r:1000, jit:0.018, easy:false},
+  {lat:35.1550, lng:138.8350, name:"大平地区", yomi:"おおひら ちく", r:1000, jit:0.018, easy:false},
+  // --- 西浦・内浦（駿河湾岸） ---
+  {lat:35.0350, lng:138.7950, name:"内浦地区（三津・長浜）", yomi:"うちうら ちく（みと・ながはま）", r:1000, jit:0.012, easy:false},
+  {lat:35.0150, lng:138.7850, name:"西浦地区（江梨・木負）", yomi:"にしうら ちく（えなし・きしょう）", r:1200, jit:0.016, easy:false},
+  // --- 戸田・井田（達磨半島・西海岸） ---
+  {lat:34.9700, lng:138.7780, name:"戸田地区", yomi:"へだ ちく", r:1200, jit:0.014, easy:false},
+  {lat:34.9950, lng:138.7720, name:"井田地区", yomi:"いた ちく", r:1200, jit:0.012, easy:false},
+];
+// ぬまづの宝100選（ストリートビューで見えやすい場所を厳選）。位置は沼津市HPの地図より。
+const TAKARA_ANCHORS = [
+  {lat:35.156618, lng:138.852323, name:"愛鷹広域公園", yomi:"あしたかこういき こうえん", r:80, jit:0, takara:true, note:"沼津市北部の森に囲まれた自然豊かな公園。桜とホタルの名所。ぬまづの宝100選No.001。"},
+  {lat:35.19831, lng:138.807932, name:"愛鷹山", yomi:"あしたかやま", r:150, jit:0, takara:true, note:"沼津で一番高い山（標高1,188m）。ブナ林や愛鷹ツツジが見られる。ぬまづの宝100選No.002。"},
+  {lat:35.131027, lng:138.892517, name:"鮎壺の滝", yomi:"あゆつぼのたき", r:80, jit:0, takara:true, note:"富士山の溶岩流でできた高さ10m・幅90mの滝。県指定天然記念物。ぬまづの宝100選No.003。"},
+  {lat:35.033109, lng:138.887647, name:"淡島", yomi:"あわしま", r:80, jit:0, takara:true, note:"内浦の海に浮かぶ小島。水族館やホテルのあるリゾート地。ぬまづの宝100選No.004。"},
+  {lat:34.996752, lng:138.775692, name:"伊豆半島ジオパーク", yomi:"いずはんとう じおぱーく", r:150, jit:0, takara:true, note:"井田の明神池など、火山がつくった地形を間近で見られるジオサイト。ぬまづの宝100選No.005。"},
+  {lat:34.9991, lng:138.779571, name:"井田の菜の花畑", yomi:"いたの なのはなばたけ", r:80, jit:0, takara:true, note:"沼津を代表する早春の名物。1〜2月が見頃。ぬまづの宝100選No.006。"},
+  {lat:35.141201, lng:138.78569, name:"浮島ひまわりらんど・なのはならんど", yomi:"うきしま ひまわりらんど", r:80, jit:0, takara:true, note:"元耕作放棄地に2万5千本のひまわり。初春は菜の花。平沼にある。ぬまづの宝100選No.007。"},
+  {lat:35.073537, lng:138.865675, name:"牛臥山公園", yomi:"うしぶせやま こうえん", r:80, jit:0, takara:true, note:"千本浜から御用邸へ続く海岸線を楽しめる海の公園。ぬまづの宝100選No.008。"},
+  {lat:35.07229, lng:138.893923, name:"大平の石神・石仏群", yomi:"おおひらの せきじん・せきぶつぐん", r:80, jit:0, takara:true, note:"大平地区一帯に約220体祀られた道祖神の石神・石仏。ぬまづの宝100選No.009。"},
+  {lat:35.123958, lng:138.873134, name:"岡宮浅間神社のクス", yomi:"おかのみやせんげんじんじゃの くす", r:80, jit:0, takara:true, note:"樹齢千数百年、高さ約21mの巨大なクス。県指定天然記念物。ぬまづの宝100選No.010。"},
+  {lat:35.02961, lng:138.788147, name:"大瀬崎", yomi:"おせざき", r:80, jit:0, takara:true, note:"駿河湾に突き出た岬。海越しの富士山と、淡水の神池で知られる。ぬまづの宝100選No.011。"},
+  {lat:35.128496, lng:138.880561, name:"門池", yomi:"かどいけ", r:80, jit:0, takara:true, note:"約1.3kmの遊歩道で四季を感じられる憩いの池。ぬまづの宝100選No.012。"},
+  {lat:35.097879, lng:138.860132, name:"狩野川", yomi:"かのがわ", r:80, jit:0, takara:true, note:"市街中心部から駿河湾へ注ぐ、県内で唯一北へ流れる一級河川。ぬまづの宝100選No.013。"},
+  {lat:34.967878, lng:138.81474, name:"北山の棚田", yomi:"きたやまの たなだ", r:80, jit:0, takara:true, note:"戸田の新田地区にある石積みの棚田。「日本の棚田百選」認定。ぬまづの宝100選No.014。"},
+  {lat:34.974848, lng:138.834056, name:"金冠山", yomi:"きんかんざん", r:150, jit:0, takara:true, note:"西浦と戸田の境にある山。山頂から富士山と駿河湾を一望できる。ぬまづの宝100選No.015。"},
+  {lat:34.989897, lng:138.855109, name:"河内の大スギ", yomi:"こうちの おおすぎ", r:80, jit:0, takara:true, note:"森の中で一本だけ存在感を放つ杉の巨木。県指定天然記念物。西浦河内。ぬまづの宝100選No.016。"},
+  {lat:35.025272, lng:138.876557, name:"三浦地区のリアス海岸", yomi:"みうらちくの りあすかいがん", r:150, jit:0, takara:true, note:"西浦の入り組んだ海岸線。小さな漁港と段々畑が連なる。ぬまづの宝100選No.017。"},
+  {lat:35.092889, lng:138.847278, name:"千本松原", yomi:"せんぼんまつばら", r:80, jit:0, takara:true, note:"狩野川河口から続く松林。富士山と夕陽が美しい白砂青松100選。ぬまづの宝100選No.018。"},
+  {lat:34.926641, lng:138.875663, name:"達磨山", yomi:"だるまやま", r:150, jit:0, takara:true, note:"伊豆市との境にある標高982mの山。山頂に戸田村民建立の石碑。ぬまづの宝100選No.019。"},
+  {lat:35.072456, lng:138.869594, name:"ダルマ夕日", yomi:"だるまゆうひ", r:80, jit:0, takara:true, note:"戸田の海に、だるまのような形で沈む冬の夕日。ぬまづの宝100選No.020。"},
+  {lat:35.06263, lng:138.89176, name:"沼津アルプス", yomi:"ぬまづあるぷす", r:150, jit:0, takara:true, note:"香貫山から鷲頭山へと続く、市民に愛される縦走の山並み。ぬまづの宝100選No.021。"},
+  {lat:35.091893, lng:138.875694, name:"沼津から見る富士山", yomi:"ぬまづから みる ふじさん", r:150, jit:0, takara:true, note:"香貫山の展望台などから望む、駿河湾ごしの富士山。ぬまづの宝100選No.022。"},
+  {lat:35.000716, lng:138.778584, name:"沼津の海", yomi:"ぬまづの うみ", r:150, jit:0, takara:true, note:"駿河湾に面した、沼津の海辺の風景。ぬまづの宝100選No.023。"},
+  {lat:35.127895, lng:138.799788, name:"沼津の桜の名所", yomi:"ぬまづの さくらの めいしょ", r:150, jit:0, takara:true, note:"沼川沿いなどに続く、春の桜並木。ぬまづの宝100選No.024。"},
+  {lat:35.134389, lng:138.785942, name:"沼津の湧水群", yomi:"あくあぷらざ ゆうすいち", r:80, jit:0, takara:true, note:"浮島沼の植生や野鳥が観察できる遊水地。原・雌鹿塚にある。ぬまづの宝100選No.025（沼津の湧水群）。"},
+  {lat:34.966482, lng:138.819967, name:"はかま滝", yomi:"はかまだき", r:150, jit:0, takara:true, note:"戸田の山あいにある滝。沢沿いの自然が楽しめる。ぬまづの宝100選No.026。"},
+  {lat:34.983113, lng:138.770338, name:"戸田の富士山展望スポット", yomi:"へだの ふじさん てんぼうすぽっと", r:80, jit:0, takara:true, note:"煌めきの丘・出逢い岬など、富士山と駿河湾を望む戸田の展望地。ぬまづの宝100選No.027。"},
+  {lat:35.012935, lng:138.90321, name:"発端丈山", yomi:"ほったんじょうやま", r:150, jit:0, takara:true, note:"内浦にある標高410mの山。山頂から富士山と駿河湾を一望できる。ぬまづの宝100選No.028。"},
+  {lat:34.97729, lng:138.764115, name:"御浜岬", yomi:"みはまみさき", r:80, jit:0, takara:true, note:"砂れきが堆積してできた、戸田港を抱く岬。ジオサイト。ぬまづの宝100選No.029。"},
+  {lat:35.153473, lng:138.822227, name:"赤野観音堂", yomi:"あけの かんのんどう", r:80, jit:0, takara:true, note:"江戸前期の建築様式を残すお堂。沼津新八景のひとつ。柳沢にある。ぬまづの宝100選No.030。"},
+  {lat:35.142539, lng:138.795553, name:"阿野全成と大泉寺", yomi:"だいせんじ（あのぜんじょうの はか）", r:80, jit:0, takara:true, note:"源頼朝の弟・阿野全成の館跡といわれる寺。墓は市の史跡。東井出。ぬまづの宝100選No.031。"},
+  {lat:35.020357, lng:138.869147, name:"伊豆石産業遺産群", yomi:"いずいし さんぎょういさんぐん", r:80, jit:0, takara:true, note:"沼津産の伊豆石を使った石蔵などが残る。西浦久連の石蔵通りなど。ぬまづの宝100選No.032。"},
+  {lat:35.13474, lng:138.85822, name:"江原素六", yomi:"めいじしりょうかん（えばらそろく）", r:80, jit:0, takara:true, note:"沼津兵学校などを設立した江原素六の功績を伝える史料館。西熊堂。ぬまづの宝100選No.033。"},
+  {lat:35.096123, lng:138.8591, name:"御成橋", yomi:"おなりばし", r:80, jit:0, takara:true, note:"狩野川にかかる、県東部初の鉄橋。御用邸へ向かう皇族にちなむ名。ぬまづの宝100選No.034。"},
+  {lat:35.083327, lng:138.879677, name:"海軍技研址の碑", yomi:"かいぐんぎけんし のひ", r:80, jit:0, takara:true, note:"昭和16年、海軍技術研究所の音響研究部が置かれた地。下香貫にある。ぬまづの宝100選No.035。"},
+  {lat:35.048364, lng:138.906636, name:"狩野川放水路", yomi:"かのがわ ほうすいろ", r:80, jit:0, takara:true, note:"昭和40年完成、3つのトンネルが特徴の大規模水路。口野にある。ぬまづの宝100選No.036。"},
+  {lat:35.025254, lng:138.909981, name:"旧三津坂隧道", yomi:"きゅうみとざか ずいどう", r:80, jit:0, takara:true, note:"明治29年完成、現存する伊豆最古のトンネル。井上靖「しろばんば」にも登場。ぬまづの宝100選No.037。"},
+  {lat:35.141536, lng:138.807095, name:"興国寺城跡", yomi:"こうこくじじょうあと", r:80, jit:0, takara:true, note:"北条早雲が旗揚げした城の跡。国指定史跡。ぬまづの宝100選No.038。"},
+  {lat:35.126089, lng:138.874403, name:"光長寺", yomi:"こうちょうじ", r:80, jit:0, takara:true, note:"700年以上の歴史をもつ法華宗の大本山。岡宮にある。ぬまづの宝100選No.039。"},
+  {lat:35.021127, lng:138.869483, name:"興農学園農場", yomi:"こうのうがくえん のうじょう", r:80, jit:0, takara:true, note:"昭和4年開校のデンマーク式農場教育の場。西浦久連にある。ぬまづの宝100選No.040。"},
+  {lat:35.100729, lng:138.843188, name:"金剛寺（文覚上人と金女郎狐）", yomi:"こんごうじ", r:80, jit:0, takara:true, note:"金色の母狐が小狐の供養を文覚上人に頼んだ伝説の寺。西間門。ぬまづの宝100選No.041。"},
+  {lat:35.099199, lng:138.859413, name:"三枚橋城・沼津城と沼津兵学校", yomi:"さんまいばしじょう・ぬまづじょうあと", r:80, jit:0, takara:true, note:"武田勝頼が築き、のちに沼津城・沼津兵学校が置かれた地。中央公園内。ぬまづの宝100選No.042。"},
+  {lat:35.087842, lng:138.856932, name:"蛇松緑道", yomi:"じゃまつりょくどう", r:80, jit:0, takara:true, note:"国鉄沼津港線の廃線跡を整備した緑の遊歩道。ぬまづの宝100選No.043。"},
+  {lat:35.123971, lng:138.800314, name:"松蔭寺と白隠禅師", yomi:"しょういんじ", r:80, jit:0, takara:true, note:"原で生まれた名僧・白隠禅師ゆかりの寺。原駅から徒歩約10分。ぬまづの宝100選No.044。"},
+  {lat:35.000964, lng:138.862412, name:"禅長寺", yomi:"ぜんちょうじ", r:80, jit:0, takara:true, note:"菖蒲御前が源頼政の遺骨を持って潜んだ伝説の寺。頼政堂は市文化財。ぬまづの宝100選No.045。"},
+  {lat:35.122072, lng:138.854368, name:"大中寺恩香殿と鐘楼門", yomi:"だいちゅうじ", r:80, jit:0, takara:true, note:"市内唯一の鐘楼門を持つ寺。梅園が有名で、恩香殿は国登録有形文化財。ぬまづの宝100選No.046。"},
+  {lat:35.124757, lng:138.798785, name:"帯笑園", yomi:"たいしょうえん", r:80, jit:0, takara:true, note:"原の植松家が江戸時代から伝える庭園。原駅から徒歩約10分。ぬまづの宝100選No.047。"},
+  {lat:35.122305, lng:138.86095, name:"高尾山古墳と祭典", yomi:"たかおさん こふん", r:80, jit:0, takara:true, note:"3世紀中頃の東日本最古級の前方後方墳。東熊堂にある。ぬまづの宝100選No.048。"},
+  {lat:35.105145, lng:138.85552, name:"高沢公園のSL", yomi:"たかざわこうえんの えすえる", r:80, jit:0, takara:true, note:"日本最大級の蒸気機関車D52。沼津駅北口から徒歩5分。ぬまづの宝100選No.049。"},
+  {lat:35.018618, lng:138.887815, name:"長浜城跡", yomi:"ながはまじょうあと", r:80, jit:0, takara:true, note:"後北条氏の水軍が拠点とした城の跡。国指定史跡。ぬまづの宝100選No.050。"},
+  {lat:35.072921, lng:138.871815, name:"沼津御用邸記念公園", yomi:"ぬまづごようてい きねんこうえん", r:80, jit:0, takara:true, note:"大正天皇の静養のため造られた御用邸。国指定名勝。ぬまづの宝100選No.051。"},
+  {lat:35.093125, lng:138.852043, name:"浜の観音さん（長谷寺）", yomi:"はまの かんのんさん（はせでら）", r:80, jit:0, takara:true, note:"千本松原の北隣にある時宗の寺。航海安全を祈る観音大曼陀羅で知られる。ぬまづの宝100選No.052。"},
+  {lat:35.10107, lng:138.868905, name:"日枝神社", yomi:"ひえじんじゃ（さんのうさん）", r:80, jit:0, takara:true, note:"平安時代から900年以上の歴史をもつ神社。「山王さん」として親しまれる。ぬまづの宝100選No.053。"},
+  {lat:34.975513, lng:138.777596, name:"松城家住宅", yomi:"まつしろけ じゅうたく", r:80, jit:0, takara:true, note:"廻船業で財を成した松城家の居宅。戸田にある擬洋風建築の国重要文化財。ぬまづの宝100選No.054。"},
+  {lat:35.020559, lng:138.897427, name:"安田屋旅館 松棟・月棟", yomi:"やすだや りょかん", r:80, jit:0, takara:true, note:"太宰治が「斜陽」を執筆した旅館。内浦三津。国登録有形文化財。ぬまづの宝100選No.055。"},
+  {lat:34.969589, lng:138.771062, name:"洋式帆船建造地跡（ディアナ号/ヘダ号）", yomi:"ようしきはんせん せいぞうちあと", r:80, jit:0, takara:true, note:"幕末、日露が協力して日本初の洋式帆船ヘダ号を建造した地。戸田。県指定史跡。ぬまづの宝100選No.056。"},
+  {lat:35.091582, lng:138.850266, name:"明石海人（歌碑）", yomi:"あかしかいじん かひ", r:80, jit:0, takara:true, note:"歌集「白描」で知られる歌人・明石海人の歌碑。千本浜公園内。ぬまづの宝100選No.057。"},
+  {lat:35.093299, lng:138.849189, name:"井上靖（文学碑）", yomi:"いのうえやすし ぶんがくひ", r:80, jit:0, takara:true, note:"沼津で育った芥川賞作家・井上靖の文学碑。千本公園内にある。ぬまづの宝100選No.058。"},
+  {lat:35.071206, lng:138.87332, name:"内浦・静浦及び周辺地域の漁撈用具", yomi:"ぎょろうようぐ", r:80, jit:0, takara:true, note:"内浦・静浦周辺に伝わる漁の道具。地域の暮らしの歴史を物語る。ぬまづの宝100選No.059。"},
+  {lat:35.048884, lng:138.890809, name:"江浦水祝儀と裸参り", yomi:"えのうら みずしゅうぎと はだかまいり", r:80, jit:0, takara:true, note:"江浦に伝わる、海に入って身を清める正月の行事。ぬまづの宝100選No.060。"},
+  {lat:35.028024, lng:138.786536, name:"大瀬まつり・内浦漁港祭", yomi:"おせまつり・うちうらぎょこうさい", r:80, jit:0, takara:true, note:"西浦・内浦の海で行われる、にぎやかな夏の祭り。ぬまづの宝100選No.061。"},
+  {lat:35.125121, lng:138.798398, name:"おんべこんべ", yomi:"おんべこんべ", r:80, jit:0, takara:true, note:"原地区に伝わる正月の伝統行事。ぬまづの宝100選No.062。"},
+  {lat:35.073071, lng:138.862549, name:"海中みそぎ", yomi:"かいちゅう みそぎ", r:80, jit:0, takara:true, note:"牛臥海岸で行われる、海に入って身を清める伝統行事。ぬまづの宝100選No.063。"},
+  {lat:35.0799, lng:138.861483, name:"我入道の渡し船", yomi:"がにゅうどうの わたしぶね", r:80, jit:0, takara:true, note:"狩野川の河口で、対岸の我入道を結ぶ渡し船。ぬまづの宝100選No.064。"},
+  {lat:35.021415, lng:138.789973, name:"吟道の碑", yomi:"ぎんどうの ひ", r:80, jit:0, takara:true, note:"大瀬崎にある、詩歌をたたえる碑。ぬまづの宝100選No.065。"},
+  {lat:34.972153, lng:138.763658, name:"ごぜ芸能まつり", yomi:"ごぜ げいのうまつり", r:80, jit:0, takara:true, note:"戸田に伝わる、目の不自由な女性芸能者「瞽女」をしのぶ祭り。ぬまづの宝100選No.066。"},
+  {lat:35.074788, lng:138.859606, name:"潮の音プロムナードと文学碑", yomi:"しおのね ぷろむなーどと ぶんがくひ", r:80, jit:0, takara:true, note:"下香貫の海沿いに整備された遊歩道と文学碑。ぬまづの宝100選No.067。"},
+  {lat:35.074804, lng:138.861395, name:"芹沢光治良記念館", yomi:"せりざわこうじろう きねんかん", r:80, jit:0, takara:true, note:"我入道生まれの作家・芹沢光治良の記念館。我入道海岸の松原の中。ぬまづの宝100選No.068。"},
+  {lat:35.012122, lng:138.873013, name:"天王祭", yomi:"てんのうさい", r:80, jit:0, takara:true, note:"西浦河内に伝わる、夏の無病息災を願う祭り。ぬまづの宝100選No.069。"},
+  {lat:35.087008, lng:138.852026, name:"沼津垣", yomi:"ぬまがき", r:80, jit:0, takara:true, note:"千本浜一帯に伝わる、竹を網代に編んだ風よけの垣根。ぬまづの宝100選No.070。"},
+  {lat:35.093971, lng:138.847991, name:"沼津の歌（歌碑）", yomi:"ぬまづの うた（かひ）", r:80, jit:0, takara:true, note:"千本公園内にある、沼津をうたった歌の碑。ぬまづの宝100選No.071。"},
+  {lat:35.099639, lng:138.861591, name:"BARのまち・沼津のBAR文化", yomi:"ぬまづの ばーぶんか", r:80, jit:0, takara:true, note:"大手町を中心に、上質なバーが多く集まる沼津の夜の文化。ぬまづの宝100選No.072。"},
+  {lat:35.122538, lng:138.794195, name:"原海岸と地引網", yomi:"はらかいがんと じびきあみ", r:80, jit:0, takara:true, note:"原の海岸で続けられてきた伝統の地引網漁。ぬまづの宝100選No.073。"},
+  {lat:34.971424, lng:138.786948, name:"戸田の漁師踊り", yomi:"へだの りょうしおどり", r:80, jit:0, takara:true, note:"戸田に伝わる、大漁を祝う勇壮な踊り。ぬまづの宝100選No.074。"},
+  {lat:35.095307, lng:138.851689, name:"モン・ミュゼ沼津（庄司美術館）", yomi:"もん・みゅぜ ぬまづ（しょうじびじゅつかん）", r:80, jit:0, takara:true, note:"版画家・山口源の作品などを収蔵する市の美術館。下一丁田にある。ぬまづの宝100選No.075。"},
+  {lat:35.098136, lng:138.846261, name:"若山牧水（記念館）", yomi:"わかやまぼくすい きねんかん", r:80, jit:0, takara:true, note:"千本松原を愛した歌人・若山牧水の記念館。千本郷林の文学のみち沿い。ぬまづの宝100選No.076。"},
+  {lat:35.122636, lng:138.797828, name:"あしたか牛", yomi:"あしたかうしの ふるさと", r:80, jit:0, takara:true, note:"愛鷹山麓で育てられるブランド牛「あしたか牛」。ぬまづの宝100選No.077。"},
+  {lat:35.020534, lng:138.86511, name:"西浦みかん", yomi:"にしうら みかん", r:80, jit:0, takara:true, note:"西浦の段々畑で育つ、甘い温州みかん。ぬまづの宝100選No.078。"},
+  {lat:35.020311, lng:138.877648, name:"西浦レモネード", yomi:"にしうら れもねーど", r:80, jit:0, takara:true, note:"西浦産レモンを使った、さわやかなご当地ドリンク。ぬまづの宝100選No.079。"},
+  {lat:35.082749, lng:138.858268, name:"沼津の寿司", yomi:"ぬまづの すし", r:80, jit:0, takara:true, note:"駿河湾の新鮮な魚介を使った、沼津自慢の寿司。ぬまづの宝100選No.080。"},
+  {lat:35.126009, lng:138.878251, name:"ひもの（あじの干物）", yomi:"ひもの（あじの ひもの）", r:80, jit:0, takara:true, note:"沼津港で水揚げされたあじなどを開いて干した名産品。ぬまづの宝100選No.081。"},
+  {lat:34.970829, lng:138.790601, name:"戸田たちばな", yomi:"へだ たちばな", r:80, jit:0, takara:true, note:"戸田で育つ、香り高い柑橘「橘」。ぬまづの宝100選No.082。"},
+  {lat:34.97193, lng:138.763126, name:"戸田の塩（戸田塩）", yomi:"へだの しお（へだじお）", r:80, jit:0, takara:true, note:"戸田の海水から作られる、まろやかな塩。ぬまづの宝100選No.083。"},
+  {lat:35.139637, lng:138.856236, name:"アスルクラロ沼津", yomi:"あするくらろ ぬまづ", r:80, jit:0, takara:true, note:"愛鷹広域公園を本拠とする、沼津のプロサッカークラブ。ぬまづの宝100選No.084。"},
+  {lat:35.097386, lng:138.861199, name:"こいのぼりフェスティバル", yomi:"こいのぼり ふぇすてぃばる", r:80, jit:0, takara:true, note:"狩野川にたくさんの鯉のぼりが泳ぐ、春のイベント。ぬまづの宝100選No.085。"},
+  {lat:35.019314, lng:138.880008, name:"スカンジナビア号（ステラポラリス）", yomi:"すかんじなびあごう しりょうかん", r:80, jit:0, takara:true, note:"西浦木負の海沿いに係留されていた豪華客船の資料館。海のステージ内。ぬまづの宝100選No.086。"},
+  {lat:35.101191, lng:138.858306, name:"仲見世通り（七夕まつり）", yomi:"なかみせどおり（たなばたまつり）", r:80, jit:0, takara:true, note:"沼津駅前の商店街。夏には七夕飾りでにぎわう。ぬまづの宝100選No.087。"},
+  {lat:35.097253, lng:138.859092, name:"沼津夏まつり・狩野川花火大会", yomi:"ぬまづ なつまつり・かのがわ はなびたいかい", r:80, jit:0, takara:true, note:"狩野川で行われる、沼津の夏の一大花火大会。ぬまづの宝100選No.088。"},
+  {lat:35.104046, lng:138.860679, name:"フェンシングのまち", yomi:"ふぇんしんぐの まち", r:80, jit:0, takara:true, note:"沼津はフェンシングが盛んな街として知られる。ぬまづの宝100選No.089。"},
+  {lat:34.972884, lng:138.777072, name:"戸田港まつり", yomi:"へだ みなとまつり", r:80, jit:0, takara:true, note:"戸田港で行われる、夏の港の祭り。ぬまづの宝100選No.090。"},
+  {lat:35.083125, lng:138.857596, name:"よさこい東海道", yomi:"よさこい とうかいどう", r:80, jit:0, takara:true, note:"大手町などを舞台に踊る、よさこいの祭典。ぬまづの宝100選No.091。"},
+  {lat:35.017703, lng:138.893357, name:"ラブライブ！サンシャイン!!の聖地", yomi:"みのうら そうごうあんないじょ", r:80, jit:0, takara:true, note:"内浦長浜にある観光案内所。アニメ「ラブライブ！サンシャイン!!」の聖地。ぬまづの宝100選No.092。"},
+  {lat:35.020844, lng:138.862088, name:"らららサンビーチ", yomi:"らららさんびーち", r:80, jit:0, takara:true, note:"伊豆西海岸で数少ない白砂の人工海浜。西浦平沢にある。ぬまづの宝100選No.093。"},
+  {lat:35.106719, lng:138.898776, name:"泉水源地", yomi:"いずみすいげんち", r:80, jit:0, takara:true, note:"沼津の水道水の源泉。日本の名水百選・柿田川湧水群の中にあり、東洋一の湧水量を誇る。ぬまづの宝100選No.094。"},
+  {lat:34.976713, lng:138.765965, name:"深海魚", yomi:"しんかいぎょ", r:80, jit:0, takara:true, note:"駿河湾でとれる、めずらしい深海の魚たち。ぬまづの宝100選No.095。"},
+  {lat:35.157636, lng:138.849288, name:"せせらぎの径と沼津ホタルまつり", yomi:"せせらぎのみちと ぬまづ ほたるまつり", r:80, jit:0, takara:true, note:"愛鷹広域公園の遊歩道。初夏にはホタルが舞う。ぬまづの宝100選No.096。"},
+  {lat:34.9701, lng:138.776927, name:"タカアシガニと甲羅のお面", yomi:"たかあしがにと こうらの おめん", r:80, jit:0, takara:true, note:"駿河湾の深海にすむタカアシガニ。甲羅でお面も作られる。ぬまづの宝100選No.097。"},
+  {lat:35.081685, lng:138.855046, name:"沼津港と大型展望水門びゅうお", yomi:"ぬまづこう・びゅうお", r:80, jit:0, takara:true, note:"食と観光の名所・沼津港のランドマーク。国内最大級の大型展望水門。ぬまづの宝100選No.098。"},
+  {lat:35.153272, lng:138.801995, name:"沼津茶と茶の湯・茶会文化", yomi:"ぬまづちゃと ちゃのゆ・ちゃかいぶんか", r:80, jit:0, takara:true, note:"愛鷹山麓で育つ沼津茶と、地域に根づく茶会の文化。ぬまづの宝100選No.099。"},
+  {lat:35.092847, lng:138.884683, name:"沼津方式（ごみの分別収集）", yomi:"ぬまづほうしき（ごみの ぶんべつしゅうしゅう）", r:80, jit:0, takara:true, note:"全国に先駆けて始まった、沼津方式のごみ分別。ぬまづの宝100選No.100。"},
+];
+const POINTS_PER_ROUND = 5000;
+const TANKA = [
+  "千本の 松の梢に 風わたり\n沼津の海の 青を知るかな",
+  "狩野川の 流れに沿うて 歩みゆけば\n富士は静かに 街を見守る",
+  "潮の香の 漂ふ港 行き暮れて\n灯ともる頃の 沼津恋ほし",
+  "ふるさとの 道を尋ねて 迷ふとも\nやがて辿らむ 海の方へと",
+  "見覚えの ある角曲がれば 懐かし\n沼津の町の 名を確かめむ",
+];
+
+let map, pano, geocoder, marker, apiKey="";
+let target=null, guessLatLng=null, round=0, total=0;
+let roundOrder=[]; // 各巡で使うエリアの並び（全域まんべんなく）
+let difficulty="easy"; // "easy"=やさしい(中心部中心) / "hard"=むずかしい(全域)
+// 難易度に応じた出題エリアのプールを返す
+function anchorPool(){
+  if(difficulty==="easy"){
+    const easy=NUMAZU_ANCHORS.filter(a=>a.easy);
+    return easy.length>=MAX_ROUNDS ? easy : NUMAZU_ANCHORS;
+  }
+  return NUMAZU_ANCHORS; // むずかしい＝全域（遠い場所も出る）
+}
+// プール内のインデックス配列を返す
+function poolIndices(){
+  return NUMAZU_ANCHORS.map((a,i)=>i).filter(i=> difficulty==="easy" ? NUMAZU_ANCHORS[i].easy : true);
+}
+const MAX_ROUNDS = 5;
+const ROUND_SECONDS = 60;
+let timerId=null, timeLeft=ROUND_SECONDS;
+
+function loadGoogle(key){
+  return new Promise((res, rej)=>{
+    window.__gmapsCb = ()=>res();
+    const s=document.createElement("script");
+    s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=geometry&callback=__gmapsCb`;
+    s.async=true; s.onerror=()=>rej(new Error("load failed"));
+    document.head.appendChild(s);
+  });
+}
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+// 全17エリアをシャッフルし、10巡ぶんの出題エリアを作る（市全域まんべんなく）
+// 対戦時はホストが決めたインデックス配列(seed)を使い、両者で同じ出題に揃える。
+// 宝100選を含めた5問の並びを作る（2問は宝、残りは通常エリア）。
+// seedは「アンカーの並び」をそのまま配列で受け渡す（宝も通常も同じ形）。
+const TAKARA_PER_GAME = 2;
+function composeRoundAnchors(){
+  // 宝100選モード：5問すべて宝から出す
+  if(difficulty==="takara"){
+    let t=shuffle(TAKARA_ANCHORS.slice());
+    while(t.length<MAX_ROUNDS){ t=t.concat(shuffle(TAKARA_ANCHORS.slice())); }
+    return t.slice(0, MAX_ROUNDS);
+  }
+  // やさしい・むずかしい：2問を宝、残りを通常エリアから
+  const takaraPick = shuffle(TAKARA_ANCHORS.slice()).slice(0, Math.min(TAKARA_PER_GAME, TAKARA_ANCHORS.length));
+  let pool=anchorPool();
+  const need=MAX_ROUNDS - takaraPick.length;
+  let areas=shuffle(pool.slice());
+  while(areas.length<need){ areas=areas.concat(shuffle(pool.slice())); }
+  areas=areas.slice(0, need);
+  // 宝と通常をまぜて、順番もシャッフル
+  return shuffle(takaraPick.concat(areas));
+}
+function buildRoundOrder(seed){
+  if(seed && seed.length){
+    roundOrder = seed.map(a=>a||NUMAZU_ANCHORS[0]);
+    return;
+  }
+  roundOrder = composeRoundAnchors();
+}
+// ホストが出題の並び（アンカーの配列）を生成。Firebaseにそのまま保存できる形にする。
+function makeSeedIndices(){
+  return composeRoundAnchors().map(a=>({
+    lat:a.lat, lng:a.lng, name:a.name, yomi:a.yomi||"", r:a.r||500, jit:a.jit||0,
+    takara: a.takara||false, note: a.note || null
+  }));
+}
+// 指定エリアの周辺でストリートビューを探す。見つからなければ半径を段階的に広げる。
+function findPanoAt(sv, anchor){
+  // 宝100選は「すぐそば」を出したいので、専用のていねいな探索（50mから少しずつ拡大）
+  if(anchor.takara){
+    return new Promise((resolve)=>{
+      const radii=[50,80,120,180,260,360]; // m。近いところから順に試す
+      let i=0;
+      const tryNext=()=>{
+        if(i>=radii.length){
+          // どうしても近くに無ければ、宝の座標そのものを中心に最後の探索
+          sv.getPanorama({location:{lat:anchor.lat,lng:anchor.lng}, radius:500},(d,s)=>{
+            if(s==="OK") resolve({panoId:d.location.pano,pos:d.location.latLng,hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null});
+            else resolve({panoId:null,pos:new google.maps.LatLng(anchor.lat,anchor.lng),hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null});
+          });
+          return;
+        }
+        sv.getPanorama({location:{lat:anchor.lat,lng:anchor.lng}, radius:radii[i], source:google.maps.StreetViewSource.OUTDOOR},
+          (data,status)=>{
+            if(status==="OK"){ resolve({panoId:data.location.pano,pos:data.location.latLng,hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null}); }
+            else { i++; tryNext(); }
+          });
+      };
+      tryNext();
+    });
+  }
+  return new Promise((resolve)=>{
+    let tries=0;
+    const baseR=anchor.r||500, jit=anchor.jit||0.012;
+    const attempt=()=>{
+      tries++;
+      const lat=anchor.lat+(Math.random()-0.5)*jit*2;
+      const lng=anchor.lng+(Math.random()-0.5)*jit*2;
+      const radius=Math.min(baseR*(1+Math.floor(tries/4)), 3000); // 4回ごとに探索範囲拡大
+      sv.getPanorama({location:{lat,lng}, radius, source:google.maps.StreetViewSource.OUTDOOR},
+        (data,status)=>{
+        if(status==="OK"){ resolve({panoId:data.location.pano,pos:data.location.latLng,hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null}); }
+        else if(tries<30){ attempt(); }
+        else {
+          // それでも無ければ屋内含めて最後の探索、なお駄目なら沼津駅へ
+          sv.getPanorama({location:{lat:anchor.lat,lng:anchor.lng}, radius:3000},(d,s)=>{
+            if(s==="OK") resolve({panoId:d.location.pano,pos:d.location.latLng,hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null});
+            else sv.getPanorama({location:NUMAZU_ANCHORS[0],radius:1000},(d2)=>resolve({panoId:d2.location.pano,pos:d2.location.latLng,hint:"沼津駅周辺",yomi:"ぬまづえき しゅうへん",note:null}));
+          });
+        }
+      });
+    };
+    attempt();
+  });
+}
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+function updateTimerUI(){
+  document.getElementById("timerNum").textContent=timeLeft;
+  document.getElementById("timer").classList.toggle("warn", timeLeft<=10);
+}
+// 難易度ごとの制限時間（むずかしいは短く30秒）
+function roundSeconds(){
+  return difficulty==="hard" ? 30 : ROUND_SECONDS;
+}
+function startTimer(){
+  stopTimer();
+  timeLeft=roundSeconds();
+  document.getElementById("timer").style.display="flex";
+  updateTimerUI();
+  timerId=setInterval(()=>{
+    timeLeft--;
+    updateTimerUI();
+    if(timeLeft<=0){ stopTimer(); onTimeUp(); }
+  },1000);
+}
+function onTimeUp(){
+  // 時間切れ：推測済みならその点、未回答なら0点で確定
+  if(guessLatLng){ submitGuess(true); }
+  else { submitGuess(true, true); }
+}
+async function startRound(){
+  round++;
+  guessLatLng=null;
+  stopTimer();
+  document.getElementById("guessBtn").disabled=true;
+  document.getElementById("roundLabel").innerHTML=`第${round}問 / 全${MAX_ROUNDS}問`;
+  document.getElementById("handleLabel").textContent="地図でこたえる";
+  if(marker){ marker.setMap(null); marker=null; }
+  closePanel();
+  hideWait();
+  if(isVersus){ roomRef.child("players/"+myId).update({ round:round, alive:true }); }
+
+  let found;
+  if(isVersus && sharedPanos && sharedPanos[round-1]){
+    // 対戦：主催者が用意した共通の風景を使う（待たない＝固まらない）
+    const v=sharedPanos[round-1];
+    found={panoId:v.panoId, pos:new google.maps.LatLng(v.lat,v.lng), hint:v.hint, yomi:v.yomi||"", note:v.note||null};
+  } else {
+    // 一人用、または万一panoが配られていない場合は自分で探す
+    const sv=new google.maps.StreetViewService();
+    const anchor=roundOrder[round-1] || NUMAZU_ANCHORS[0];
+    found=await findPanoAt(sv, anchor);
+  }
+
+  target={latLng:found.pos, hint:found.hint, yomi:found.yomi, note:found.note||null};
+  target.takaraNo = found.note ? takaraNoFromNote(found.note) : null;
+  if(!found.panoId){
+    // 万一パノラマIDが無いときは、その地点の近くを最後にもう一度だけ探す
+    try{
+      const sv2=new google.maps.StreetViewService();
+      const d=await new Promise(res=>sv2.getPanorama({location:{lat:found.pos.lat(),lng:found.pos.lng()},radius:1000},(r,s)=>res(s==="OK"?r:null)));
+      if(d) found.panoId=d.location.pano;
+    }catch(e){}
+  }
+  if(found.panoId) pano.setPano(found.panoId);
+  pano.setPov({heading:Math.random()*360, pitch:0});
+  pano.setVisible(true);
+  map.setCenter(NUMAZU.center); map.setZoom(12);
+  if(round===1){
+    const h=document.getElementById("playHint");
+    h.classList.add("show");
+    setTimeout(()=>h.classList.remove("show"), 6500);
+  }
+  startTimer();
+}
+function placeGuess(latlng){
+  guessLatLng=latlng;
+  if(marker) marker.setMap(null);
+  marker=new google.maps.Marker({position:latlng, map:map,
+    icon:{path:google.maps.SymbolPath.CIRCLE, scale:9, fillColor:"#ee7a52", fillOpacity:1, strokeColor:"#fff", strokeWeight:3}});
+  document.getElementById("guessBtn").disabled=false;
+  document.getElementById("handleLabel").textContent="この場所でこたえる？";
+}
+function scoreFor(km){ return Math.min(5000, Math.round(5000*Math.exp(-km/3.0))); }
+function submitGuess(fromTimer=false, noAnswer=false){
+  if(!fromTimer && !guessLatLng) return;
+  if(timerId===null && !fromTimer) return; // 既に確定済みなら無視
+  stopTimer();
+  document.getElementById("timer").style.display="none";
+  document.getElementById("guessBtn").disabled=true;
+
+  let km, pts;
+  if(noAnswer || !guessLatLng){
+    km=null; pts=0;
+  } else {
+    km=google.maps.geometry.spherical.computeDistanceBetween(guessLatLng,target.latLng)/1000;
+    pts=scoreFor(km);
+  }
+  total+=pts;
+  document.getElementById("totalScore").textContent=total.toLocaleString();
+  if(isVersus) document.getElementById("oppbarMe").textContent=total.toLocaleString();
+  const rm=new google.maps.Map(document.getElementById("resultMap"),{center:target.latLng,zoom:13,disableDefaultUI:true,gestureHandling:"none"});
+  if(guessLatLng){
+    new google.maps.Marker({position:guessLatLng,map:rm,icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:"#ee7a52",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
+    new google.maps.Polyline({path:[guessLatLng,target.latLng],map:rm,strokeColor:"#e0b94a",strokeWeight:3,strokeOpacity:0.9});
+  }
+  new google.maps.Marker({position:target.latLng,map:rm,icon:{path:google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,scale:5,fillColor:"#2d6a8e",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
+  // 自分の答えと正解が必ず1画面に収まるよう範囲を合わせる
+  if(guessLatLng){
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend(guessLatLng); bounds.extend(target.latLng);
+    google.maps.event.addListenerOnce(rm,"idle",()=>{
+      rm.fitBounds(bounds, {top:60,bottom:60,left:60,right:60});
+      // 近すぎるときに拡大されすぎないよう上限を設定
+      const z=rm.getZoom(); if(z>16) rm.setZoom(16);
+    });
+    // パネル表示直後はサイズ未確定なので、resize後に再フィット
+    setTimeout(()=>{ google.maps.event.trigger(rm,"resize"); rm.fitBounds(bounds,{top:60,bottom:60,left:60,right:60}); if(rm.getZoom()>16) rm.setZoom(16); },250);
+  } else {
+    setTimeout(()=>{ google.maps.event.trigger(rm,"resize"); rm.setCenter(target.latLng); rm.setZoom(14); },250);
+  }
+  document.getElementById("distVal").textContent = (km===null) ? "—" : (km<1 ? Math.round(km*1000)+"m" : km.toFixed(2)+"km");
+  document.getElementById("ptsVal").textContent=pts;
+  setPlaceName(target.hint, target.yomi);
+  const tn=document.getElementById("takaraNote");
+  if(tn){
+    if(target.note){
+      tn.innerHTML = '<span class="badge">ぬまづの宝100選</span><br>'+escapeHtml(target.note);
+      tn.style.display="block";
+    } else {
+      tn.style.display="none";
+    }
+  }
+  if(noAnswer || !guessLatLng){
+    document.getElementById("resultTitle").textContent="時間切れ！";
+  } else {
+    document.getElementById("resultTitle").textContent = pts>=4500?"神業！":pts>=3500?"お見事":pts>=2000?"なかなか":pts>=800?"惜しい":"また挑戦！";
+  }
+  if(!target.note){
+    geocoder.geocode({location:target.latLng, language:"ja"},(res,st)=>{
+      if(st==="OK"&&res[0]){
+        const c=res[0].address_components.find(x=>x.types.includes("sublocality")||x.types.includes("locality"));
+        if(c) setPlaceName("沼津市 "+c.long_name, target.yomi);
+      }
+    });
+  }
+  document.getElementById("nextBtn").textContent = round>=MAX_ROUNDS ? "結果を見る →" : "次の問題へ →";
+
+  if(isVersus){
+    // 自分のこの問の得点・累計・回答地点をみんなに共有（振り返りにも使う）
+    const g = guessLatLng ? {lat:guessLatLng.lat(), lng:guessLatLng.lng()} : null;
+    const upd = { total: total, round: round };
+    upd["guesses/"+round] = { pts: pts, lat: g?g.lat:null, lng: g?g.lng:null };
+    roomRef.child("players/"+myId).update(upd);
+    updateResultVs();
+  }
+  // 宝100選で写真があれば、結果の前に数秒だけ正解写真を見せる
+  showTakaraPhotoThen(()=>{
+    document.getElementById("resultOverlay").classList.add("show");
+  });
+}
+
+// note の「No.016」から番号を取り出す（無ければ null）
+function takaraNoFromNote(note){
+  const m = String(note||"").match(/No\.?\s*0*(\d{1,3})/);
+  return m ? parseInt(m[1],10) : null;
+}
+
+// 正解写真リビール：画像があれば show、無ければ即コールバック
+let photoTimer=null;
+function showTakaraPhotoThen(done){
+  const ov=document.getElementById("photoReveal");
+  const no=target && target.takaraNo;
+  // 宝モードでない／番号が取れない場合はスキップ
+  if(!no){ done(); return; }
+  const img=document.getElementById("photoRevealImg");
+  const cap=document.getElementById("photoRevealCap");
+  const src=TAKARA_PHOTO_DIR + String(no).padStart(3,"0") + ".jpg";
+  let finished=false;
+  const finish=()=>{
+    if(finished) return; finished=true;
+    if(photoTimer){ clearTimeout(photoTimer); photoTimer=null; }
+    ov.classList.remove("show");
+    ov.onclick=null;
+    setTimeout(done, 280); // フェードアウト後に結果を出す
+  };
+  img.onload=()=>{
+    cap.innerHTML = '<span class="pno">No.'+no+'</span>'+escapeHtml(target.hint||"");
+    ov.classList.add("show");
+    ov.onclick=finish;                       // タップでスキップ
+    photoTimer=setTimeout(finish, TAKARA_PHOTO_SECS*1000);
+  };
+  img.onerror=()=>{ done(); };               // 画像が無ければ写真は出さず結果へ
+  img.src=src;
+}
+function next(){
+  document.getElementById("resultOverlay").classList.remove("show");
+  if(!isVersus){
+    if(round>=MAX_ROUNDS) showFinal(); else startRound();
+    return;
+  }
+  // 対戦：各自のペースで進む（誰も待たない＝固まらない）
+  if(round>=MAX_ROUNDS){
+    roomRef.child("players/"+myId).update({ finished:true, round:round });
+    showFinal();
+  } else {
+    startRound();
+  }
+}
+// 生きている全員が同じ round を終えるまで待つ。
+// SYNC_TIMEOUT_MS を過ぎたら、止まっている人を待たずに先へ進む保険つき。
+let waitHandler=null;       // 現在の待ち受けリスナー
+function waitForEveryoneThen(cb){
+  // 念のため、前の待ち受けが残っていたら必ず外す（リスナーの重複を防ぐ）
+  if(waitHandler){ try{ roomRef.child("players").off("value", waitHandler); }catch(e){} waitHandler=null; }
+  if(syncTimer){ clearTimeout(syncTimer); syncTimer=null; }
+
+  let done=false;
+  let countTimer=null;
+  const finish=()=>{
+    if(done) return; done=true;
+    if(waitHandler){ try{ roomRef.child("players").off("value", waitHandler); }catch(e){} waitHandler=null; }
+    if(syncTimer){ clearTimeout(syncTimer); syncTimer=null; }
+    if(countTimer){ clearInterval(countTimer); countTimer=null; }
+    cb();
+  };
+  const check=(ps)=>{
+    const alive=Object.values(ps||{}).filter(p=>p && p.alive!==false);
+    if(alive.length===0) return false;
+    // この巡を終えた人 = 既に次の巡へ進んだ、または ready:true かつ round>=現在巡
+    return alive.every(p=> (p.round||0)>round || (p.ready===true && (p.round||0)>=round) );
+  };
+  waitHandler = roomRef.child("players").on("value", snap=>{
+    playersCache = snap.val() || playersCache;
+    if(check(snap.val())) finish();
+  });
+  // 保険：一定時間で強制的に次へ（残り秒数も表示）
+  let remain=Math.ceil(SYNC_TIMEOUT_MS/1000);
+  showWait("みんなを まっています…（あと "+remain+"秒）");
+  countTimer=setInterval(()=>{
+    remain--;
+    if(remain>0) showWait("みんなを まっています…（あと "+remain+"秒）");
+    else showWait("つぎへ すすみます…");
+  },1000);
+  syncTimer=setTimeout(finish, SYNC_TIMEOUT_MS);
+}
+function showWait(msg){ document.getElementById("waitMsg").textContent=msg||""; document.getElementById("waitOverlay").classList.add("show"); }
+function hideWait(){ document.getElementById("waitOverlay").classList.remove("show"); }
+// 結果画面・対戦バーに順位表を表示
+function rankingLines(){
+  const arr=Object.entries(playersCache)
+    .filter(([id,p])=>p && p.alive!==false)
+    .map(([id,p])=>({id, name:p.name||"プレイヤー", total:p.total||0, finished:p.finished===true}))
+    .sort((a,b)=>b.total-a.total);
+  return arr;
+}
+function updateResultVs(){
+  const el=document.getElementById("resultVs");
+  if(!isVersus){ el.textContent=""; return; }
+  const arr=rankingLines();
+  const myRank=arr.findIndex(p=>p.id===myId)+1;
+  el.innerHTML = `<div style="font-weight:bold;margin-bottom:4px;">いまの順位：${myRank}位 / ${arr.length}人</div>` +
+    arr.slice(0,8).map((p,i)=>{
+      const mine = p.id===myId ? ' style="color:var(--coral);font-weight:bold;"' : '';
+      return `<div${mine}>${i+1}. ${escapeHtml(p.name)} … ${p.total.toLocaleString()}点</div>`;
+    }).join("");
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+// 地名にふりがなを添えて結果画面に表示（ルビ）
+function setPlaceName(name, yomi){
+  const el=document.getElementById("placeName");
+  if(yomi){
+    el.innerHTML = '— <ruby>'+escapeHtml(name)+'<rt>'+escapeHtml(yomi)+'</rt></ruby> 付近 —';
+  } else {
+    el.textContent = "— "+name+" 付近 —";
+  }
+}
+function rankFor(pct){
+  if(pct>=0.92) return {name:"河内大杉の神", yomi:"こうちのおおすぎのかみ"};
+  if(pct>=0.84) return {name:"水神社の龍", yomi:"すいじんじゃ の りゅう"};
+  if(pct>=0.74) return {name:"駿河湾の主", yomi:"するがわん の ぬし"};
+  if(pct>=0.64) return {name:"御用邸の門番", yomi:"ごようてい の もんばん"};
+  if(pct>=0.54) return {name:"あゆみ橋の達人", yomi:"あゆみばし の たつじん"};
+  if(pct>=0.44) return {name:"千本松の案内人", yomi:"せんぼんまつ の あんないにん"};
+  if(pct>=0.34) return {name:"仲見世の常連", yomi:"なかみせ の じょうれん"};
+  if(pct>=0.24) return {name:"リコー通りの新星", yomi:"リコーどおり の しんせい"};
+  if(pct>=0.14) return {name:"沼津港の見習い", yomi:"ぬまづこう の みならい"};
+  return {name:"はじめての沼津", yomi:"はじめて の ぬまづ"};
+}
+function rankRuby(pct){
+  const r=rankFor(pct);
+  return '<ruby>'+escapeHtml(r.name)+'<rt>'+escapeHtml(r.yomi)+'</rt></ruby>';
+}
+function showFinal(){
+  document.getElementById("finalScore").textContent=total.toLocaleString();
+  const pct=total/(POINTS_PER_ROUND*MAX_ROUNDS);
+  document.getElementById("finalRank").innerHTML = rankRuby(pct);
+  document.getElementById("finalTanka").textContent=TANKA[Math.floor(Math.random()*TANKA.length)];
+  const verdict=document.getElementById("finalVerdict");
+  const vsRow=document.getElementById("finalVsRow");
+  if(isVersus){
+    vsRow.style.display="none";
+    verdict.style.display="block";
+    document.getElementById("restartBtn").style.display="none";
+    const rb=document.getElementById("reviewBtn"); if(rb) rb.style.display="";
+    const br=document.getElementById("bestRow"); if(br) br.style.display="none";
+    finalShowing=true;
+    renderFinalBoard();   // 順位表は listenScores からも随時更新される
+  } else {
+    verdict.style.display="none"; vsRow.style.display="none";
+    document.getElementById("finalBoard").style.display="none";
+    document.getElementById("restartBtn").style.display="";
+    const rb=document.getElementById("reviewBtn"); if(rb) rb.style.display="none";
+    showBestScore();
+  }
+  document.getElementById("finalOverlay").classList.add("show");
+}
+// 対戦の最終画面：今わかっている順位を表示。まだ解いている人がいれば「プレイ中」と示し、
+// 全員が終わると「最終順位」に変わる。listenScores から繰り返し呼ばれて自動更新される。
+let finalShowing=false;
+function renderFinalBoard(){
+  if(!finalShowing) return;
+  const arr=rankingLines(); // total降順の配列 [{id,name,total,...}]
+  const all=Object.values(playersCache||{}).filter(p=>p && p.alive!==false);
+  const finishedCount=all.filter(p=>p && p.finished===true).length;
+  const everyoneDone = all.length>0 && finishedCount>=all.length;
+
+  const myRank=arr.findIndex(p=>p.id===myId)+1;
+  const verdict=document.getElementById("finalVerdict");
+  if(everyoneDone){
+    if(myRank===1){ verdict.textContent="優勝！ 🎉 今日の沼津王"; verdict.className="final-verdict win"; }
+    else if(myRank<=3){ verdict.textContent=myRank+"位！ あっぱれ"; verdict.className="final-verdict draw"; }
+    else { verdict.textContent=myRank+"位 / "+arr.length+"人"; verdict.className="final-verdict lose"; }
+  } else {
+    verdict.textContent="いまの順位："+myRank+"位 / "+arr.length+"人";
+    verdict.className="final-verdict draw";
+  }
+  const board=document.getElementById("finalBoard");
+  board.style.display="block";
+  const title = everyoneDone ? "最終順位" : `順位（${finishedCount}/${all.length}人 終了）`;
+  board.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${title}</div>` +
+    arr.map((p,i)=>{
+      const mine = p.id===myId ? ' style="color:var(--coral);font-weight:bold;"' : '';
+      const medal = everyoneDone ? (i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)+".") : ((i+1)+".");
+      const playing = (p.finished===true) ? "" : ` <span style="color:var(--sea);font-size:13px;">…プレイ中</span>`;
+      return `<div${mine}>${medal} ${escapeHtml(p.name)} … ${(p.total||0).toLocaleString()}点${playing}</div>`;
+    }).join("");
+}
+// 一人用：その端末の自己ベストを記録・表示（保存できない環境では静かに非表示）
+function showBestScore(){
+  const bestRow=document.getElementById("bestRow");
+  const bestText=document.getElementById("bestText");
+  if(!bestRow||!bestText) return;
+  let prev=0, isNew=false;
+  try{
+    prev=parseInt(localStorage.getItem("numaguesser_best")||"0",10)||0;
+    if(total>prev){ localStorage.setItem("numaguesser_best", String(total)); isNew=true; }
+  }catch(e){ bestRow.style.display="none"; return; }
+  const best=Math.max(prev,total);
+  if(isNew){
+    bestRow.className="best-row newbest";
+    bestText.innerHTML="自己ベスト こうしん！ "+total.toLocaleString()+"点 <span class=\"badge\">NEW</span>";
+  } else {
+    bestRow.className="best-row";
+    bestText.textContent="自己ベスト "+best.toLocaleString()+"点";
+  }
+  bestRow.style.display="block";
+}
+// ===== ふりかえり：全5問の正解とみんなの回答地点を地図で表示 =====
+const REVIEW_COLORS = ["#2d8e6a","#8e5a2d","#6a2d8e","#2d6a8e","#8e2d5a","#5a8e2d","#2d2d8e"];
+function showReview(){
+  document.getElementById("finalOverlay").classList.remove("show");
+  const list=document.getElementById("reviewList");
+  list.innerHTML="";
+  const players=Object.entries(playersCache||{}).filter(([id,p])=>p && p.alive!==false);
+  // 各問ぶんの枠を先に作る
+  for(let r=1;r<=MAX_ROUNDS;r++){
+    const wrap=document.createElement("div");
+    wrap.className="review-q";
+    const correct = sharedPanos && sharedPanos[r-1];
+    const hintTxt = correct ? (correct.hint||"") : "";
+    wrap.innerHTML = `<h3>第${r}問：${escapeHtml(hintTxt)} 付近</h3><div class="qmap" id="qmap${r}"></div><div class="review-legend" id="qleg${r}"></div>`;
+    list.appendChild(wrap);
+  }
+  document.getElementById("reviewOverlay").classList.add("show");
+  // 地図を順に描く
+  for(let r=1;r<=MAX_ROUNDS;r++){
+    const correct = sharedPanos && sharedPanos[r-1];
+    if(!correct) continue;
+    const center={lat:correct.lat, lng:correct.lng};
+    const m=new google.maps.Map(document.getElementById("qmap"+r),{center:center,zoom:13,disableDefaultUI:true,gestureHandling:"none"});
+    const bounds=new google.maps.LatLngBounds();
+    // 正解（青い旗マーカー）
+    const correctPos=new google.maps.LatLng(correct.lat,correct.lng);
+    new google.maps.Marker({position:correctPos,map:m,
+      icon:{path:google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,scale:6,fillColor:"#2d6a8e",fillOpacity:1,strokeColor:"#fff",strokeWeight:2},
+      zIndex:999, title:"正解"});
+    bounds.extend(correctPos);
+    // 各プレイヤーの回答地点
+    let legend=`<span><span class="dot" style="background:#2d6a8e;"></span>正解</span>`;
+    players.forEach(([id,p],idx)=>{
+      const g = p.guesses && p.guesses[r];
+      if(!g || g.lat==null || g.lng==null) return;
+      const isMe = id===myId;
+      const color = isMe ? "#ee7a52" : REVIEW_COLORS[idx % REVIEW_COLORS.length];
+      const pos=new google.maps.LatLng(g.lat,g.lng);
+      new google.maps.Marker({position:pos,map:m,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:isMe?8:6,fillColor:color,fillOpacity:1,strokeColor:"#fff",strokeWeight:2},
+        zIndex:isMe?500:100, title:(p.name||"")});
+      new google.maps.Polyline({path:[pos,correctPos],map:m,strokeColor:color,strokeWeight:2,strokeOpacity:0.6});
+      bounds.extend(pos);
+      const nm = escapeHtml(p.name||"プレイヤー") + (isMe?"（あなた）":"");
+      legend += `<span><span class="dot" style="background:${color};"></span>${nm}</span>`;
+    });
+    document.getElementById("qleg"+r).innerHTML=legend;
+    // 全員と正解が収まるよう範囲を合わせる
+    (function(map,bnds){
+      google.maps.event.addListenerOnce(map,"idle",()=>{ map.fitBounds(bnds,{top:30,bottom:30,left:30,right:30}); if(map.getZoom()>16) map.setZoom(16); });
+      setTimeout(()=>{ google.maps.event.trigger(map,"resize"); map.fitBounds(bnds,{top:30,bottom:30,left:30,right:30}); if(map.getZoom()>16) map.setZoom(16); },300);
+    })(m,bounds);
+  }
+}
+function closeReview(){
+  document.getElementById("reviewOverlay").classList.remove("show");
+  document.getElementById("finalOverlay").classList.add("show");
+}
+function restart(){
+  total=0; round=0;
+  buildRoundOrder();
+  document.getElementById("totalScore").textContent="0";
+  document.getElementById("finalOverlay").classList.remove("show");
+  startRound();
+}
+
+// ===== panel (PC: 常設・拡大トグル) =====
+function openPanel(){ /* PC版は常時表示のため何もしない */ }
+function closePanel(){ document.getElementById("guesspanel").classList.remove("expanded"); setTimeout(()=>{ if(map) google.maps.event.trigger(map,"resize"); },350); }
+function toggleExpand(){
+  document.getElementById("guesspanel").classList.toggle("expanded");
+  setTimeout(()=>google.maps.event.trigger(map,"resize"),350);
+}
+
+// 地図APIの読み込み（共通）。読み込み済みなら即座に返す。
+let googleReady=false;
+async function ensureGoogle(){
+  if(googleReady) return true;
+  apiKey=EMBEDDED_API_KEY;
+  const msg=document.getElementById("loadMsg");
+  msg.textContent="地図を よみこみ中…";
+  try{ await loadGoogle(apiKey); }
+  catch(e){ msg.textContent="よみこみに失敗しました。少し待って再度お試しください。"; return false; }
+  geocoder=new google.maps.Geocoder();
+  pano=new google.maps.StreetViewPanorama(document.getElementById("pano"),{
+    addressControl:false, showRoadLabels:false, linksControl:true,
+    panControl:false, enableCloseButton:false, fullscreenControl:false, zoomControl:false,
+    motionTracking:false, motionTrackingControl:false
+  });
+  map=new google.maps.Map(document.getElementById("map"),{
+    center:NUMAZU.center, zoom:12, disableDefaultUI:true, clickableIcons:false,
+    gestureHandling:"greedy", styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
+  });
+  map.addListener("click", e=>placeGuess(e.latLng));
+  msg.textContent="";
+  googleReady=true;
+  return true;
+}
+
+// ひとりで遊ぶ
+async function begin(){
+  if(!await ensureGoogle()) return;
+  isVersus=false;
+  document.getElementById("oppbar").style.display="none";
+  buildRoundOrder();
+  document.getElementById("splash").classList.add("hide");
+  startRound();
+}
+
+// ===== 対戦：Firebase 初期化 =====
+function ensureFirebase(){
+  if(fbDB) return true;
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    fbDB=firebase.database();
+    return true;
+  }catch(e){ return false; }
+}
+function makeRoomCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 紛らわしい文字を除外
+  let s=""; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+// ===== 主催：待合室をつくる =====
+function createRoom(){
+  hideAllBoxes();
+  document.getElementById("hostBox").style.display="block";
+  document.getElementById("hostName").focus();
+}
+async function hostGo(){
+  const hs=document.getElementById("hostStatus");
+  myName=(document.getElementById("hostName").value||"").trim() || "主催者";
+  hs.textContent="準備中…";
+  if(!ensureFirebase()){ hs.textContent="つうしんの じゅんびに しっぱいしました。"; return; }
+  if(!await ensureGoogle()){ return; }
+
+  isVersus=true; isHost=true;
+  roomId=makeRoomCode();
+  roomRef=fbDB.ref("rooms/"+roomId);
+  myId="h"+Date.now().toString(36);
+  const seed=makeSeedIndices();
+  await roomRef.set({
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    seed: seed, diff: difficulty, state:"lobby", started:false,
+    players: { [myId]:{ name:myName, total:0, round:0, ready:false, alive:true, host:true } }
+  });
+  // 主催者が切断しても部屋は消さない（瞬断で全員が固まるのを防ぐ）。
+  // 自分が抜けたことだけ印にする。
+  roomRef.child("players/"+myId).onDisconnect().update({ alive:false });
+  buildRoundOrder(seed);
+  enterLobby();
+}
+
+// ===== 参加：あいことばで入る =====
+function showJoin(prefillCode){
+  hideAllBoxes();
+  document.getElementById("joinBox").style.display="block";
+  if(prefillCode){
+    const ci=document.getElementById("roomCodeInput");
+    ci.value=String(prefillCode).toUpperCase().slice(0,4);
+  }
+  document.getElementById("joinName").focus();
+}
+async function joinRoom(){
+  const js=document.getElementById("joinStatus");
+  myName=(document.getElementById("joinName").value||"").trim();
+  const code=(document.getElementById("roomCodeInput").value||"").trim().toUpperCase();
+  if(!myName){ js.textContent="お名前を いれてください。"; return; }
+  if(code.length!==4){ js.textContent="あいことばは 4文字です。"; return; }
+  js.textContent="さがしています…";
+  if(!ensureFirebase()){ js.textContent="つうしんの じゅんびに しっぱいしました。"; return; }
+
+  const ref=fbDB.ref("rooms/"+code);
+  const snap=await ref.get();
+  if(!snap.exists()){ js.textContent="その あいことばの 待合室が みつかりません。"; return; }
+  const data=snap.val();
+  if(data.started){ js.textContent="その回は すでに はじまっています。"; return; }
+  const count=data.players ? Object.keys(data.players).length : 0;
+  if(count>=MAX_PLAYERS){ js.textContent=`定員（${MAX_PLAYERS}人）に たっしています。`; return; }
+  if(!await ensureGoogle()){ return; }
+
+  isVersus=true; isHost=false;
+  roomId=code; roomRef=ref;
+  myId="p"+Date.now().toString(36)+Math.floor(Math.random()*1000);
+  if(data.diff){ difficulty=data.diff; } // ホストの難易度（制限時間や出題に反映）
+  buildRoundOrder(data.seed);
+  await roomRef.child("players/"+myId).set({ name:myName, total:0, round:0, ready:false, alive:true });
+  // 切断したら自分を「抜けた」印に（待ち合わせで無視される）
+  roomRef.child("players/"+myId).onDisconnect().update({ alive:false });
+  enterLobby();
+}
+
+// ===== 待合室（ロビー）=====
+function enterLobby(){
+  document.getElementById("splash").classList.add("hide");
+  document.getElementById("lobbyCode").textContent=roomId;
+  document.getElementById("lobbyOverlay").classList.add("show");
+  // 主催者だけ「はじめる」ボタンを持つ
+  document.getElementById("lobbyStartBtn").style.display = isHost ? "" : "none";
+  document.getElementById("lobbyWaitMsg").style.display = isHost ? "none" : "";
+  startMini();
+
+  // 参加者リストを監視
+  roomRef.child("players").on("value", snap=>{
+    playersCache = snap.val() || {};
+    renderLobby();
+  });
+  // ゲーム開始の合図を監視（panosが配られたら各自スタート）
+  roomRef.child("started").on("value", async snap=>{
+    if(snap.val()===true){
+      roomRef.child("started").off();
+      // 全員共通の5問ぶんの風景を取得
+      try{
+        const ps=await roomRef.child("panos").get();
+        sharedPanos = ps.exists() ? ps.val() : null;
+      }catch(e){ sharedPanos=null; }
+      document.getElementById("lobbyOverlay").classList.remove("show");
+      stopMini();
+      document.getElementById("oppbar").style.display="flex";
+      listenScores();
+      startRound();
+    }
+  });
+}
+function renderLobby(){
+  const arr=Object.entries(playersCache).filter(([id,p])=>p && p.alive!==false);
+  document.getElementById("lobbyCount").textContent=`参加者：${arr.length}人 / 最大${MAX_PLAYERS}人`;
+  const list=document.getElementById("lobbyList");
+  list.innerHTML = arr.map(([id,p])=>{
+    const you = id===myId ? " you" : "";
+    const crown = p.host ? "👑 " : "";
+    return `<div class="row${you}">${crown}${escapeHtml(p.name||"プレイヤー")}${id===myId?"（あなた）":""}</div>`;
+  }).join("");
+  // 主催者は2人以上で開始可能
+  if(isHost){
+    document.getElementById("lobbyStartBtn").disabled = arr.length<2;
+    document.getElementById("lobbyStartBtn").textContent = arr.length<2 ? "あと1人以上で はじめられます" : `${arr.length}人で はじめる →`;
+  }
+}
+async function lobbyStart(){
+  if(!isHost) return;
+  const btn=document.getElementById("lobbyStartBtn");
+  btn.disabled=true; btn.textContent="準備中…";
+  if(!await ensureGoogle()){ btn.disabled=false; return; }
+  // 5問ぶんの風景を主催者がまとめて決めて、全員に配る（各自ペースでも同じ問題になる）
+  const sv=new google.maps.StreetViewService();
+  const panos=[];
+  for(let i=0;i<MAX_ROUNDS;i++){
+    const anchor=roundOrder[i] || NUMAZU_ANCHORS[0];
+    const f=await findPanoAt(sv, anchor);
+    panos.push({ panoId:f.panoId, lat:f.pos.lat(), lng:f.pos.lng(), hint:f.hint, yomi:f.yomi||"", note:f.note||null });
+  }
+  await roomRef.update({ panos: panos, started:true, state:"playing" });
+}
+
+// ===== 全員のスコアを監視して順位表に反映 =====
+function listenScores(){
+  roomRef.child("players").on("value", snap=>{
+    playersCache = snap.val() || {};
+    const me = playersCache[myId];
+    document.getElementById("oppbarMe").textContent=(total||0).toLocaleString();
+    // バーには自分の順位を出す
+    const arr=rankingLines();
+    const myRank=arr.findIndex(p=>p.id===myId)+1;
+    document.getElementById("oppbarOpp").textContent=`${myRank}位/${arr.length}人`;
+    if(document.getElementById("resultOverlay").classList.contains("show")) updateResultVs();
+    if(finalShowing) renderFinalBoard();
+  });
+}
+function hideAllBoxes(){
+  document.getElementById("hostBox").style.display="none";
+  document.getElementById("joinBox").style.display="none";
+}
+
+function checkPublishPeriod(){
+  const note=document.getElementById("periodNote");
+  const end=new Date(PUBLISH_END_DATE+"T23:59:59+09:00");
+  if(isNaN(end.getTime())){ note.textContent=""; return true; }
+  if(new Date()>end){
+    document.getElementById("splash").classList.add("hide");
+    document.getElementById("closedScreen").classList.remove("hide");
+    return false;
+  }
+  note.textContent=`公開は ${end.getFullYear()}年${end.getMonth()+1}月${end.getDate()}日 まで`;
+  return true;
+}
+
+document.getElementById("startBtn").onclick=begin;
+document.getElementById("createBtn").onclick=createRoom;
+document.getElementById("joinBtn").onclick=()=>showJoin();
+// モードの切り替え（やさしい/むずかしい/宝100選）
+function setDifficulty(d){
+  difficulty=d;
+  document.getElementById("diffEasy").classList.toggle("active", d==="easy");
+  document.getElementById("diffHard").classList.toggle("active", d==="hard");
+  document.getElementById("diffTakara").classList.toggle("active", d==="takara");
+  let note;
+  if(d==="easy") note="中心部や港など、わかりやすい場所から出題します";
+  else if(d==="hard") note="山間部を含めた市内すみずみから出題（上級・制限時間30秒）";
+  else note="ぬまづの宝100選だけを巡る、沼津の宝めぐりモード";
+  document.getElementById("diffNote").textContent=note;
+}
+document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
+document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
+document.getElementById("diffTakara").onclick=()=>setDifficulty("takara");
+
+// ===== 待合室の沼津ミニ情報スライド =====
+// イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
+const MINI_ART = {
+  matsubara: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="120" fill="none"/>
+    <circle cx="150" cy="34" r="14" fill="#ffd98a"/>
+    <polygon points="60,78 100,24 140,78" fill="#7d99ad"/>
+    <polygon points="84,46 100,24 116,46 108,42 100,50 92,42" fill="#fbf7ef"/>
+    <rect x="0" y="78" width="200" height="42" fill="#cdb892"/>
+    <g fill="#3f7a5a">
+      <circle cx="24" cy="74" r="11"/><circle cx="40" cy="78" r="13"/><circle cx="56" cy="74" r="10"/>
+      <circle cx="150" cy="76" r="12"/><circle cx="166" cy="80" r="14"/><circle cx="182" cy="75" r="11"/>
+    </g>
+    <g fill="#5a3d28"><rect x="38" y="80" width="4" height="14"/><rect x="164" y="82" width="4" height="14"/></g>
+    <rect x="0" y="104" width="200" height="16" fill="#2d6a8e" opacity="0.5"/>
+  </svg>`,
+  byuo: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="36" cy="30" r="13" fill="#ffd98a"/>
+    <rect x="0" y="92" width="200" height="28" fill="#2d6a8e" opacity="0.5"/>
+    <rect x="78" y="30" width="16" height="74" fill="#fbf7ef" stroke="#9bb0bd" stroke-width="2"/>
+    <rect x="110" y="30" width="16" height="74" fill="#fbf7ef" stroke="#9bb0bd" stroke-width="2"/>
+    <rect x="74" y="34" width="56" height="16" fill="#fff" stroke="#9bb0bd" stroke-width="2"/>
+    <line x1="80" y1="42" x2="124" y2="42" stroke="#9bb0bd" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="82" y="74" width="40" height="30" fill="#f3f1ec" stroke="#9bb0bd" stroke-width="2"/>
+  </svg>`,
+  goyotei: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="96" width="200" height="24" fill="#9db98a" opacity="0.6"/>
+    <g fill="#3f7a5a"><circle cx="22" cy="60" r="14"/><circle cx="178" cy="60" r="14"/><circle cx="40" cy="66" r="11"/><circle cx="160" cy="66" r="11"/></g>
+    <rect x="60" y="64" width="80" height="36" fill="#fbf7ef" stroke="#9bb0bd" stroke-width="2"/>
+    <polygon points="54,64 100,40 146,64" fill="#7d6a55"/>
+    <rect x="74" y="76" width="14" height="24" fill="#9bb0bd"/>
+    <rect x="112" y="76" width="14" height="24" fill="#9bb0bd"/>
+    <rect x="94" y="80" width="12" height="20" fill="#7d6a55"/>
+  </svg>`,
+  kanogawa: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="160" cy="28" r="12" fill="#ffd98a"/>
+    <polygon points="120,70 150,30 180,70" fill="#9bb0bd"/>
+    <polygon points="138,42 150,30 162,42" fill="#fbf7ef"/>
+    <path d="M0,72 Q50,64 100,72 T200,72 L200,120 L0,120 Z" fill="#4f8fb0" opacity="0.7"/>
+    <path d="M0,86 Q50,80 100,86 T200,86" fill="none" stroke="#fff" stroke-width="2" opacity="0.5"/>
+    <path d="M0,100 Q50,94 100,100 T200,100" fill="none" stroke="#fff" stroke-width="2" opacity="0.4"/>
+    <g fill="#3f7a5a"><circle cx="18" cy="68" r="9"/><circle cx="30" cy="70" r="7"/></g>
+  </svg>`,
+  uchiura: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="40" cy="30" r="12" fill="#ffd98a"/>
+    <path d="M0,60 Q40,52 90,58 L200,52 L200,90 L0,90 Z" fill="#7d99ad" opacity="0.55"/>
+    <path d="M0,80 L200,80 L200,120 L0,120 Z" fill="#2d6a8e" opacity="0.55"/>
+    <g fill="#6c8597"><rect x="120" y="70" width="10" height="14"/><rect x="134" y="66" width="10" height="18"/><rect x="148" y="72" width="10" height="12"/></g>
+    <g stroke="#5a3d28" stroke-width="2"><line x1="40" y1="84" x2="40" y2="98"/><line x1="56" y1="84" x2="56" y2="98"/></g>
+    <ellipse cx="48" cy="100" rx="22" ry="5" fill="#cdb892"/>
+  </svg>`,
+  heda: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="165" cy="28" r="12" fill="#ffd98a"/>
+    <path d="M0,64 Q60,40 130,58 Q170,64 200,56 L200,90 L0,90 Z" fill="#7d99ad" opacity="0.5"/>
+    <path d="M0,82 L200,82 L200,120 L0,120 Z" fill="#2d6a8e" opacity="0.6"/>
+    <path d="M40,100 q14,-10 28,0 q-14,6 -28,0 Z" fill="#fbf7ef" stroke="#9bb0bd" stroke-width="1.5"/>
+    <line x1="54" y1="78" x2="54" y2="100" stroke="#5a3d28" stroke-width="2"/>
+    <path d="M54,80 l16,8 -16,6 Z" fill="#ee7a52"/>
+  </svg>`,
+  minato: `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="158" cy="28" r="12" fill="#ffd98a"/>
+    <path d="M0,86 L200,86 L200,120 L0,120 Z" fill="#2d6a8e" opacity="0.6"/>
+    <rect x="30" y="58" width="40" height="28" fill="#ee7a52" opacity="0.85"/>
+    <rect x="30" y="58" width="40" height="8" fill="#c85a3a"/>
+    <rect x="92" y="50" width="36" height="36" fill="#fbf7ef" stroke="#9bb0bd" stroke-width="2"/>
+    <line x1="110" y1="50" x2="110" y2="86" stroke="#9bb0bd" stroke-width="2"/>
+    <line x1="92" y1="68" x2="128" y2="68" stroke="#9bb0bd" stroke-width="2"/>
+    <path d="M150,70 q10,-8 20,0 q-10,6 -20,0 Z" fill="#fff" stroke="#9bb0bd" stroke-width="1.5"/>
+    <line x1="160" y1="56" x2="160" y2="70" stroke="#5a3d28" stroke-width="2"/>
+  </svg>`
+};
+const MINI_SLIDES = [
+  { art:"matsubara", title:"千本松原（せんぼんまつばら）",
+    text:"狩野川の河口から富士市まで、約15kmも続く松原。戦国時代の戦でいちど切られてしまった松を、増誉上人が一本ずつお経を唱えながら植え直したと伝わります。歌人・若山牧水が伐採から守ったことでも有名で、今では30万本以上あるそうです。" },
+  { art:"byuo", title:"びゅうお（沼津港大型展望水門）",
+    text:"沼津港のシンボル。東海地震の津波からまちを守るため2004年にできました。扉は幅40m・高さ9.3m・重さ406tと日本最大級。地上30mの展望回廊からは、富士山や駿河湾、千本松原まで360度見渡せます。名前は「View（景色）＋魚（うお）」から。" },
+  { art:"goyotei", title:"沼津御用邸記念公園",
+    text:"1893年（明治26年）、のちの大正天皇のご静養のために造られた御用邸。松林と駿河湾に囲まれた、富士山も望める温暖な場所です。本邸は沼津大空襲で焼けましたが、西附属邸・東附属邸が残り、2016年に「旧沼津御用邸苑地」として国の名勝になりました。" },
+  { art:"kanogawa", title:"狩野川（かのがわ）",
+    text:"伊豆でいちばん高い天城山に源を発し、沼津のまちなかをゆったり流れて駿河湾へ注ぐ一級河川。静岡県で唯一、北へ向かって流れる川として知られます。鮎の友釣りがさかんで、川べりの階段堤は市民の憩いの場。夏の花火など、催しもたくさん。" },
+  { art:"uchiura", title:"内浦・三津（うちうら・みと）",
+    text:"駿河湾に面した、おだやかな入り江の地区。古くからの漁港や、海沿いの宿が並ぶ景色が魅力です。波がおだやかで、海越しに富士山を望めるスポットも多く、沼津の海の幸を支えてきた土地です。" },
+  { art:"heda", title:"戸田（へだ）",
+    text:"達磨半島の先にある、深い湾に守られた港まち。日本でいちばん深い駿河湾に面し、タカアシガニなどの深海の幸で知られます。江戸時代の終わりには、ここで日本初の本格的な洋式帆船が造られた歴史もあります。" },
+  { art:"minato", title:"沼津港（ぬまづこう）",
+    text:"駿河湾の新鮮な魚が集まる、活気ある港。市場や食事処が並び、たくさんの人でにぎわいます。すぐそばには展望水門びゅうおがそびえ、海と富士山、行き交う船の景色が楽しめる、沼津を代表する場所です。" }
+];
+let miniIdx=0, miniTimer=null;
+function renderMini(){
+  const s=MINI_SLIDES[miniIdx];
+  document.getElementById("miniArt").innerHTML = MINI_ART[s.art]||"";
+  document.getElementById("miniTitle").textContent = s.title;
+  document.getElementById("miniText").textContent = s.text;
+  document.getElementById("miniPage").textContent = `(${miniIdx+1}/${MINI_SLIDES.length})`;
+}
+function miniGo(d){
+  miniIdx=(miniIdx+d+MINI_SLIDES.length)%MINI_SLIDES.length;
+  renderMini();
+  restartMiniTimer();
+}
+function restartMiniTimer(){
+  if(miniTimer) clearInterval(miniTimer);
+  miniTimer=setInterval(()=>{ miniIdx=(miniIdx+1)%MINI_SLIDES.length; renderMini(); }, 7000);
+}
+function startMini(){ miniIdx=0; renderMini(); restartMiniTimer(); }
+function stopMini(){ if(miniTimer){ clearInterval(miniTimer); miniTimer=null; } }
+document.getElementById("miniPrev").onclick=()=>miniGo(-1);
+document.getElementById("miniNext").onclick=()=>miniGo(1);
+document.getElementById("hostGoBtn").onclick=hostGo;
+document.getElementById("joinGoBtn").onclick=joinRoom;
+document.getElementById("lobbyStartBtn").onclick=lobbyStart;
+document.getElementById("guessBtn").onclick=()=>submitGuess(false);
+document.getElementById("nextBtn").onclick=next;
+document.getElementById("restartBtn").onclick=restart;
+document.getElementById("reviewBtn").onclick=showReview;
+document.getElementById("homeBtn").onclick=()=>{ location.reload(); };
+document.getElementById("reviewCloseBtn").onclick=closeReview;
+// 友だちに合言葉とURLを送る
+function inviteMessage(){
+  const code=(roomId||document.getElementById("lobbyCode").textContent||"").trim();
+  const url="https://richebaty.github.io/numa-guesser-battle/party.html?join="+encodeURIComponent(code);
+  return `ぬまゲッサーで対戦しよう！\n↓タップして参加（あいことばは自動で入ります）\n${url}\n\n※あいことば：${code}`;
+}
+function flashShareNote(msg){
+  const n=document.getElementById("shareNote");
+  n.textContent=msg; setTimeout(()=>{ if(n.textContent===msg) n.textContent=""; }, 3000);
+}
+document.getElementById("shareBtn").onclick=async ()=>{
+  const text=inviteMessage();
+  if(navigator.share){
+    try{ await navigator.share({ text:text }); }
+    catch(e){ /* キャンセル時は何もしない */ }
+  } else {
+    // 共有メニューが使えない端末（多くのPC）はコピーで代替
+    try{ await navigator.clipboard.writeText(text); flashShareNote("文面をコピーしました。LINEなどに貼り付けて送ってください"); }
+    catch(e){ flashShareNote("この端末では共有できません。合言葉を手で伝えてください"); }
+  }
+};
+document.getElementById("copyBtn").onclick=async ()=>{
+  try{ await navigator.clipboard.writeText(inviteMessage()); flashShareNote("文面をコピーしました！"); }
+  catch(e){ flashShareNote("コピーできませんでした。合言葉を手で伝えてください"); }
+};
+document.getElementById("handleRow").onclick=toggleExpand;
+checkPublishPeriod();
+// 招待リンク（?join=合言葉）で開かれたら、参加画面を自動で開いて合言葉を入れておく
+(function autoJoinFromLink(){
+  try{
+    const params=new URLSearchParams(location.search);
+    const code=(params.get("join")||"").trim().toUpperCase();
+    if(code && code.length>=1 && code.length<=4){
+      // スプラッシュのボタン群を飛ばして、参加ボックスを開く
+      showJoin(code);
+    }
+  }catch(e){ /* 何もしない（通常起動） */ }
+})();
+</script>
+</body>
+</html>
