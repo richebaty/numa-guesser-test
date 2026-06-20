@@ -272,6 +272,14 @@
     background-size:cover; background-position:center; pointer-events:none;
   }
   .splash.takara-on .takara-bg{ opacity:1; }
+  .takara-credit{
+    position:absolute; left:0; right:0; z-index:61;
+    bottom:calc(var(--safe-b) + 18px); text-align:center;
+    color:rgba(255,255,255,0.92); font-size:13px; letter-spacing:1px;
+    text-shadow:0 1px 4px rgba(0,0,0,0.55);
+    opacity:0; transition:opacity .4s; pointer-events:none;
+  }
+  .splash.takara-on .takara-credit{ opacity:1; }
   .splash.takara-on .sun,.splash.takara-on .fuji,.splash.takara-on .town,
   .splash.takara-on .byuo,.splash.takara-on .pine,.splash.takara-on .sea-band,
   .splash.takara-on .wave,.splash.takara-on .boat{ opacity:0; transition:opacity .4s; }
@@ -315,15 +323,17 @@
     background:linear-gradient(170deg, var(--sky1) 0%, var(--sky2) 45%, var(--sky3) 100%);
   }
   @media (min-aspect-ratio:1/1){
-    /* PC・タブレット横：下寄せをやめ、中央寄りでバランスを取る */
     .splash { justify-content:center; }
-    .splash-content { padding-bottom:0; transform:translateY(-4vh); }
+    .splash-content { padding-bottom:0; }
     .sun { top:8%; width:110px; height:110px; }
     .fuji { bottom:30%; }
-    .splash h1 { font-size:54px; }
-    /* 写真リビールはこれまで通り大きく */
+    .splash h1 { font-size:50px; }
     .photo-reveal-inner { max-width:900px; }
     .photo-reveal img { max-height:80vh; }
+  }
+  @media (min-aspect-ratio:16/10){
+    .splash-content { transform:translateY(-4vh); }
+    .splash h1 { font-size:54px; }
   }
   .splash.hide { display:none; }
   /* sun */
@@ -568,6 +578,7 @@
   <!-- Splash -->
   <div class="splash" id="splash">
     <div class="takara-bg" id="takaraBg"></div>
+    <div class="takara-credit" id="takaraCredit">河内の大スギ（西浦河内）</div>
     <div class="sun"></div>
     <div class="fuji"></div>
     <div class="town"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
