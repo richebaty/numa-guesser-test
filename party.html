@@ -238,6 +238,10 @@
   .review-q h3 { font-size:16px; color:var(--sea-deep); margin:0 0 6px; text-align:left; }
   .review-q .qmap { width:100%; height:230px; border-radius:12px; overflow:hidden; background:#dde6ea; }
   .review-legend { font-size:12px; color:var(--ink); text-align:left; margin:6px 2px 0; line-height:1.7; }
+  .review-photo { margin:0 0 8px; }
+  .review-photo img { width:100%; max-height:200px; object-fit:cover; border-radius:12px; display:block; background:#dde6ea; }
+  .review-photo-cap { font-size:12px; color:var(--sea-deep); text-align:left; margin:5px 2px 0; font-weight:600; }
+  .review-photo-cap .pno { display:inline-block; background:var(--gold); color:#5a4a1a; border-radius:999px; padding:1px 9px; font-size:11px; margin-right:6px; }
   .review-legend .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; vertical-align:middle; }
   .stat-row { display:flex; justify-content:space-around; margin-bottom:16px; }
   .stat .n { font-size:26px; font-weight:700; font-family:"Helvetica Neue",sans-serif; color:var(--sea-deep); }
@@ -467,6 +471,17 @@
   /* closed screen reuse splash bg but center */
   #closedScreen { justify-content:center; }
   #closedScreen .title-card { margin-bottom:0; }
+
+  .photo-reveal-credit{
+    position:absolute; right:14px; bottom:calc(var(--safe-b) + 12px);
+    color:rgba(255,255,255,0.78); font-size:11px; letter-spacing:0.5px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.6); pointer-events:none;
+  }
+  .photo-credit-splash{
+    position:absolute; right:12px; bottom:calc(var(--safe-b) + 8px); z-index:61;
+    color:rgba(255,255,255,0.7); font-size:10px; letter-spacing:0.5px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.5); pointer-events:none;
+  }
 </style>
 <!-- Firebase (対戦機能用) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -521,6 +536,7 @@
       <div class="photo-reveal-cap" id="photoRevealCap"></div>
     </div>
     <div class="photo-reveal-tap">タップで すすむ</div>
+    <div class="photo-reveal-credit">写真提供：沼津市</div>
   </div>
 
   <!-- Round result -->
@@ -580,6 +596,7 @@
   <div class="splash" id="splash">
     <div class="takara-bg" id="takaraBg"></div>
     <div class="takara-credit" id="takaraCredit">河内の大スギ（西浦河内）</div>
+    <div class="photo-credit-splash">写真提供：沼津市</div>
     <div class="sun"></div>
     <div class="fuji"></div>
     <div class="town"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
@@ -1366,10 +1383,19 @@ function showReview(){
     wrap.className="review-q";
     const correct = sharedPanos && sharedPanos[r-1];
     const hintTxt = correct ? (correct.hint||"") : "";
-    wrap.innerHTML = `<h3>第${r}問：${escapeHtml(hintTxt)} 付近</h3><div class="qmap" id="qmap${r}"></div><div class="review-legend" id="qleg${r}"></div>`;
+    // 宝100選の地点なら、その地点の写真も添える（学習用）
+    const tno = correct && correct.note ? takaraNoFromNote(correct.note) : null;
+    const photoHtml = tno
+      ? `<div class="review-photo"><img src="${TAKARA_PHOTO_DIR}${String(tno).padStart(3,"0")}.jpg" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"><div class="review-photo-cap"><span class="pno">No.${tno}</span>${escapeHtml(hintTxt)}</div></div>`
+      : "";
+    wrap.innerHTML = `<h3>第${r}問：${escapeHtml(hintTxt)} 付近</h3>${photoHtml}<div class="qmap" id="qmap${r}"></div><div class="review-legend" id="qleg${r}"></div>`;
     list.appendChild(wrap);
   }
   document.getElementById("reviewOverlay").classList.add("show");
+  // 振り返りを開いたら必ず先頭（第1問）から表示する
+  const _ro=document.getElementById("reviewOverlay");
+  if(_ro) _ro.scrollTop=0;
+  if(list) list.scrollTop=0;
   // 地図を順に描く
   for(let r=1;r<=MAX_ROUNDS;r++){
     const correct = sharedPanos && sharedPanos[r-1];
@@ -1783,7 +1809,7 @@ document.getElementById("reviewCloseBtn").onclick=closeReview;
 // 友だちに合言葉とURLを送る
 function inviteMessage(){
   const code=(roomId||document.getElementById("lobbyCode").textContent||"").trim();
-  const url=location.origin+location.pathname+"?join="+encodeURIComponent(code);
+  const url="https://richebaty.github.io/numa-guesser-battle/party.html?join="+encodeURIComponent(code);
   return `ぬまゲッサーで対戦しよう！\n↓タップして参加（あいことばは自動で入ります）\n${url}\n\n※あいことば：${code}`;
 }
 function flashShareNote(msg){
