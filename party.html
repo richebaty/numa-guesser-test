@@ -545,6 +545,29 @@
     color:rgba(255,255,255,0.7); font-size:10px; letter-spacing:0.5px;
     text-shadow:0 1px 3px rgba(0,0,0,0.5); pointer-events:none;
   }
+  /* ===== ヒモノラを探せ！モード ===== */
+  .himonora-bg{
+    position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s;
+    background-image:url("ヒモノラ手配書.jpg");
+    background-size:contain; background-position:center; background-repeat:no-repeat;
+    background-color:#f0e8cc; pointer-events:none;
+  }
+  .splash.himonora-on .himonora-bg{ opacity:1; }
+  .splash.himonora-on .sun,.splash.himonora-on .fuji,.splash.himonora-on .town,
+  .splash.himonora-on .byuo,.splash.himonora-on .pine,.splash.himonora-on .sea-band,
+  .splash.himonora-on .wave,.splash.himonora-on .boat,.splash.himonora-on .scape,
+  .splash.himonora-on .pinewood,.splash.himonora-on .fboat,.splash.himonora-on .gulls{ opacity:0; transition:opacity .4s; }
+  .splash.himonora-on h1{ color:#6b0000; text-shadow:none; }
+  .splash.himonora-on .tag,.splash.himonora-on .lead{ color:#333; }
+  /* 結果パネルのヒモノラエリア */
+  #himonoraArea{ display:none; text-align:center; margin:8px 0 4px; }
+  .h-capture{ font-size:17px; font-weight:bold; color:#8b0000; margin-bottom:2px; }
+  .h-prize{ font-size:26px; font-weight:bold; color:#b8860b; margin-bottom:6px; }
+  .h-card{ max-width:100%; max-height:180px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+  .h-fail{ font-size:14px; color:#666; line-height:1.5; margin-top:6px; }
+  /* diffボタン */
+  #diffHimonora{ background:#6b0000; color:#fff; border-color:#6b0000; }
+  #diffHimonora.active{ background:#430000; }
 </style>
 <!-- Firebase (対戦機能用) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -616,6 +639,12 @@
         <div class="stat"><div class="n" id="ptsVal">—</div><div class="l"><ruby>獲得点<rt>かくとくてん</rt></ruby></div></div>
       </div>
       <div class="placename" id="placeName">— 沼津市 —</div>
+      <div id="himonoraArea">
+        <div class="h-capture" id="himonoraCaptureLabel"></div>
+        <div class="h-prize" id="himonoraPrizeText"></div>
+        <img class="h-card" id="himonoraCardImg" src="" alt="" onerror="this.style.display='none'">
+        <div class="h-fail" id="himonoraFailMsg" style="display:none;">ヒモノラは逃げてしまいました…<br>またチャレンジしよう！</div>
+      </div>
       <div class="takara-note" id="takaraNote" style="display:none;"></div>
       <div class="result-vs" id="resultVs"></div>
       <button class="btn btn-guess" id="nextBtn">次の問題へ →</button>
@@ -630,8 +659,8 @@
       <div class="sub" style="margin-top:-2px;">おつかれさま！</div>
       <div class="final-verdict" id="finalVerdict" style="display:none;"></div>
       <div class="stat-row" style="margin:26px 0;">
-        <div class="stat"><div class="n" id="finalScore">0</div><div class="l">合計 / 25000</div></div>
-        <div class="stat"><div class="n" id="finalRank">—</div><div class="l"><ruby>称号<rt>しょうごう</rt></ruby></div></div>
+        <div class="stat"><div class="n" id="finalScore">0</div><div class="l" id="finalScoreLabel">合計 / 25000</div></div>
+        <div class="stat"><div class="n" id="finalRank">—</div><div class="l" id="finalRankLabel"><ruby>称号<rt>しょうごう</rt></ruby></div></div>
       </div>
       <div class="stat-row" id="finalVsRow" style="display:none; margin:-10px 0 18px;">
         <div class="stat"><div class="n" id="finalOpp">0</div><div class="l">あいての合計</div></div>
@@ -663,6 +692,7 @@
     <div class="takara-credit" id="takaraCredit">河内の大スギ（西浦河内）</div>
     <div class="takara-hard-bg" id="takaraHardBg"></div>
     <div class="takara-hard-credit" id="takaraHardCredit">元旦のびゅうおからの眺め</div>
+    <div class="himonora-bg" id="himonoraBg"></div>
     <div class="photo-credit-splash">写真提供：沼津市</div>
     <div class="sun"></div>
     <div class="scape" id="scape">
@@ -716,6 +746,7 @@
           <button class="diff-btn" id="diffHard">むずかしい</button>
           <button class="diff-btn" id="diffTakara">ぬまづの宝100選</button>
           <button class="diff-btn" id="diffTakaraHard">宝100選ハード</button>
+          <button class="diff-btn" id="diffHimonora">🎯ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
       </div>
@@ -967,6 +998,15 @@ const TAKARA_ANCHORS = [
   {lat:35.153272, lng:138.801995, name:"沼津茶と茶の湯・茶会文化", yomi:"ぬまづちゃと ちゃのゆ・ちゃかいぶんか", r:80, jit:0, takara:true, note:"愛鷹山麓で育つ沼津茶と、地域に根づく茶会の文化。ぬまづの宝100選No.099。"},
   {lat:35.092847, lng:138.884683, name:"沼津方式（ごみの分別収集）", yomi:"ぬまづほうしき（ごみの ぶんべつしゅうしゅう）", r:80, jit:0, takara:true, note:"全国に先駆けて始まった、沼津方式のごみ分別。ぬまづの宝100選No.100。"},
 ];
+// ===== ヒモノラを探せ！データ =====
+const HIMONORA_ANCHORS = [
+  {no:10, name:"髙嶋酒造株式会社", lat:35.1263674, lng:138.7933641, panoId:"LoRNo_UoAm7JJQwlA3Nt4Q", heading:171.14, pitch:-1.09,  photo:"photo_10.jpg"},
+  {no:12, name:"沼津港",           lat:35.0824007, lng:138.8566802, panoId:"CIHM0ogKEICAgICci6LrbA", heading:261.76, pitch:-6.27,  photo:"photo_12.jpg"},
+  {no:24, name:"八畳石",           lat:35.1500578, lng:138.8236978, panoId:"06Wu_dyFUAc6a3dHGoLaCQ", heading:69.01,  pitch:20.03,  photo:"photo_24.jpg"},
+  {no:30, name:"つじ写真館",       lat:35.0969603, lng:138.8525721, panoId:"6mkbVhYuYtVSomp0O8AgWg", heading:139.38, pitch:-7.98,  photo:"photo_30.jpg"},
+  {no:33, name:"万葉の湯",         lat:35.1351942, lng:138.8690457, panoId:"CIHM0ogKEICAgIDqo_PNCg", heading:338.99, pitch:8.82,   photo:"photo_33.jpg"},
+];
+let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true;
 const POINTS_PER_ROUND = 5000;
 const TANKA = [
   "千本の 松の梢に 風わたり\n沼津の海の 青を知るかな",
@@ -1016,6 +1056,7 @@ function shuffle(arr){
 // seedは「アンカーの並び」をそのまま配列で受け渡す（宝も通常も同じ形）。
 const TAKARA_PER_GAME = 2;
 function composeRoundAnchors(){
+  if(difficulty==="himonora") return shuffle(HIMONORA_ANCHORS.slice());
   // 宝100選モード：5問すべて宝から出す
   if(difficulty==="takara" || difficulty==="takara-hard"){
     let t=shuffle(TAKARA_ANCHORS.slice());
@@ -1033,6 +1074,11 @@ function composeRoundAnchors(){
   return shuffle(takaraPick.concat(areas));
 }
 function buildRoundOrder(seed){
+  if(difficulty==="himonora"){
+    himonoraOrder=shuffle(HIMONORA_ANCHORS.slice());
+    himonoraRoundIdx=0; himonoraAlive=true;
+    return;
+  }
   if(seed && seed.length){
     roundOrder = seed.map(a=>a||NUMAZU_ANCHORS[0]);
     return;
@@ -1102,6 +1148,7 @@ function updateTimerUI(){
 }
 // 難易度ごとの制限時間（むずかしい・宝100選ハードは30秒）
 function roundSeconds(){
+  if(difficulty==="himonora") return 60;
   return (difficulty==="hard" || difficulty==="takara-hard") ? 30 : ROUND_SECONDS;
 }
 function startTimer(){
@@ -1125,9 +1172,10 @@ async function startRound(){
   guessLatLng=null;
   stopTimer();
   document.getElementById("guessBtn").disabled=true;
-  document.getElementById("roundLabel").innerHTML=`第${round}問 / 全${MAX_ROUNDS}問`;
+  document.getElementById("roundLabel").innerHTML=difficulty==="himonora"?`ヒモノラを探せ！第${round}問`:`第${round}問 / 全${MAX_ROUNDS}問`;
   document.getElementById("handleLabel").textContent="地図でこたえる";
   if(marker){ marker.setMap(null); marker=null; }
+  const _ha=document.getElementById("himonoraArea"); if(_ha) _ha.style.display="none";
   closePanel();
   hideWait();
   if(isVersus){ roomRef.child("players/"+myId).update({ round:round, alive:true }); }
@@ -1137,6 +1185,11 @@ async function startRound(){
     // 対戦：主催者が用意した共通の風景を使う（待たない＝固まらない）
     const v=sharedPanos[round-1];
     found={panoId:v.panoId, pos:new google.maps.LatLng(v.lat,v.lng), hint:v.hint, yomi:v.yomi||"", note:v.note||null};
+  } else if(difficulty==="himonora"){
+    const a=himonoraOrder[himonoraRoundIdx % Math.max(1,himonoraOrder.length)];
+    himonoraCurrentAnchor=a;
+    himonoraRoundIdx++;
+    found={panoId:a.panoId, pos:new google.maps.LatLng(a.lat,a.lng), hint:a.name, yomi:"", note:null};
   } else {
     // 一人用、または万一panoが配られていない場合は自分で探す
     const sv=new google.maps.StreetViewService();
@@ -1155,7 +1208,7 @@ async function startRound(){
     }catch(e){}
   }
   if(found.panoId) pano.setPano(found.panoId);
-  pano.setPov({heading:Math.random()*360, pitch:0});
+  pano.setPov(difficulty==="himonora"&&himonoraCurrentAnchor?{heading:himonoraCurrentAnchor.heading,pitch:himonoraCurrentAnchor.pitch}:{heading:Math.random()*360,pitch:0});
   pano.setVisible(true);
   map.setCenter(NUMAZU.center); map.setZoom(12);
   if(round===1){
@@ -1173,7 +1226,7 @@ function placeGuess(latlng){
   document.getElementById("guessBtn").disabled=false;
   document.getElementById("handleLabel").textContent="この場所でこたえる？";
 }
-function scoreFor(km){ return Math.min(5000, Math.round(5000*Math.exp(-km/3.0))); }
+function scoreFor(km){ if(difficulty==="himonora") return 0; return Math.min(5000, Math.round(5000*Math.exp(-km/3.0))); }
 function submitGuess(fromTimer=false, noAnswer=false){
   if(!fromTimer && !guessLatLng) return;
   if(timerId===null && !fromTimer) return; // 既に確定済みなら無視
@@ -1188,7 +1241,28 @@ function submitGuess(fromTimer=false, noAnswer=false){
     km=google.maps.geometry.spherical.computeDistanceBetween(guessLatLng,target.latLng)/1000;
     pts=scoreFor(km);
   }
-  total+=pts;
+  if(difficulty==="himonora"){
+    const m=(km!==null&&km!==undefined)?km*1000:Infinity;
+    let prize=0,captureLabel="";
+    if(m<=20){prize=500000;captureLabel="生け捕り！";}
+    else if(m<=50){prize=5000;captureLabel="遺体回収";}
+    else if(m<=100){prize=500;captureLabel="写真撮影";}
+    total+=prize;
+    himonoraAlive=(prize>0);
+    document.getElementById("ptsVal").textContent=prize>0?"¥"+prize.toLocaleString():"捕獲失敗";
+    const hArea=document.getElementById("himonoraArea");
+    if(hArea){
+      hArea.style.display="block";
+      document.getElementById("himonoraCaptureLabel").textContent=captureLabel;
+      document.getElementById("himonoraPrizeText").textContent=prize>0?"¥"+prize.toLocaleString():"";
+      const img=document.getElementById("himonoraCardImg");
+      if(prize>0&&himonoraCurrentAnchor){img.src=himonoraCurrentAnchor.photo;img.style.display="";}
+      else img.style.display="none";
+      document.getElementById("himonoraFailMsg").style.display=prize>0?"none":"block";
+    }
+  } else {
+    total+=pts;
+  }
   document.getElementById("totalScore").textContent=total.toLocaleString();
   if(isVersus) document.getElementById("oppbarMe").textContent=total.toLocaleString();
   const rm=new google.maps.Map(document.getElementById("resultMap"),{center:target.latLng,zoom:13,disableDefaultUI:true,gestureHandling:"none"});
@@ -1223,7 +1297,9 @@ function submitGuess(fromTimer=false, noAnswer=false){
       tn.style.display="none";
     }
   }
-  if(noAnswer || !guessLatLng){
+  if(difficulty==="himonora"){
+    document.getElementById("resultTitle").textContent=himonoraAlive?"ヒモノラ捕獲！🎉":"捕獲失敗…";
+  } else if(noAnswer || !guessLatLng){
     document.getElementById("resultTitle").textContent="時間切れ！";
   } else {
     document.getElementById("resultTitle").textContent = pts>=4500?"神業！":pts>=3500?"お見事":pts>=2000?"なかなか":pts>=800?"惜しい":"また挑戦！";
@@ -1236,7 +1312,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
       }
     });
   }
-  document.getElementById("nextBtn").textContent = round>=MAX_ROUNDS ? "結果を見る →" : "次の問題へ →";
+  document.getElementById("nextBtn").textContent = difficulty==="himonora"?(himonoraAlive?"次の獲物へ →":"結果を見る →"):(round>=MAX_ROUNDS?"結果を見る →":"次の問題へ →");
 
   if(!isVersus){
     const g = guessLatLng ? {lat:guessLatLng.lat(), lng:guessLatLng.lng()} : null;
@@ -1295,6 +1371,10 @@ function showTakaraPhotoThen(done){
 }
 function next(){
   document.getElementById("resultOverlay").classList.remove("show");
+  if(difficulty==="himonora"){
+    if(!himonoraAlive) showFinal(); else startRound();
+    return;
+  }
   if(!isVersus){
     if(round>=MAX_ROUNDS) showFinal(); else startRound();
     return;
@@ -1392,6 +1472,21 @@ function rankRuby(pct){
   return '<ruby>'+escapeHtml(r.name)+'<rt>'+escapeHtml(r.yomi)+'</rt></ruby>';
 }
 function showFinal(){
+  if(difficulty==="himonora"){
+    const successRounds=himonoraAlive?round:round-1;
+    document.getElementById("finalScore").textContent="¥"+total.toLocaleString();
+    document.getElementById("finalRank").textContent=successRounds+"匹";
+    const sl=document.getElementById("finalScoreLabel"); if(sl) sl.textContent="獲得賞金";
+    const rl=document.getElementById("finalRankLabel"); if(rl) rl.innerHTML="捕獲数";
+    document.getElementById("finalTanka").textContent=successRounds===0?"今度こそヒモノラを見つけよう！":"よくやった！ヒモノラ研究所に報告せよ！";
+    document.getElementById("finalVsRow").style.display="none";
+    document.getElementById("finalVerdict").style.display="none";
+    document.getElementById("finalBoard").style.display="none";
+    document.getElementById("restartBtn").style.display="";
+    showBestScore();
+    document.getElementById("finalOverlay").classList.add("show");
+    return;
+  }
   document.getElementById("finalScore").textContent=total.toLocaleString();
   const pct=total/(POINTS_PER_ROUND*MAX_ROUNDS);
   document.getElementById("finalRank").innerHTML = rankRuby(pct);
@@ -1451,7 +1546,7 @@ function showBestScore(){
   const bestRow=document.getElementById("bestRow");
   const bestText=document.getElementById("bestText");
   if(!bestRow||!bestText) return;
-  const modeLabel={"easy":"やさしい","hard":"むずかしい","takara":"ぬまづの宝100選","takara-hard":"宝100選ハード"}[difficulty||"easy"]||"やさしい";
+  const modeLabel={"easy":"やさしい","hard":"むずかしい","takara":"ぬまづの宝100選","takara-hard":"宝100選ハード","himonora":"ヒモノラを探せ！"}[difficulty||"easy"]||"やさしい";
   let prev=0, isNew=false;
   try{
     const bestKey="numaguesser_best_"+(difficulty||"easy");
@@ -1548,6 +1643,7 @@ function closeReview(){
 }
 function restart(){
   myReview=[]; total=0; round=0;
+  himonoraRoundIdx=0; himonoraAlive=true;
   buildRoundOrder();
   document.getElementById("totalScore").textContent="0";
   document.getElementById("finalOverlay").classList.remove("show");
@@ -1786,10 +1882,12 @@ function setDifficulty(d){
   document.getElementById("diffHard").classList.toggle("active", d==="hard");
   document.getElementById("diffTakara").classList.toggle("active", d==="takara");
   document.getElementById("diffTakaraHard").classList.toggle("active", d==="takara-hard");
+  document.getElementById("diffHimonora").classList.toggle("active", d==="himonora");
   let note;
   if(d==="easy") note="中心部や港など、わかりやすい場所から出題します";
   else if(d==="hard") note="市内すみずみから出題（上級・制限時間30秒）";
   else if(d==="takara-hard") note="ぬまづの宝100選・制限時間30秒の超上級モード";
+  else if(d==="himonora") note="ヒモノラが目撃された場所を当てろ！100m以内で賞金GET、外れたらゲームオーバー";
   else note="ぬまづの宝100選だけを巡る、沼津の宝めぐりモード";
   document.getElementById("diffNote").textContent=note;
   // モードに応じて背景を切り替え
@@ -1797,11 +1895,13 @@ function setDifficulty(d){
   if(sp) sp.classList.toggle("takara-on", d==="takara");
   if(sp) sp.classList.toggle("takara-hard-on", d==="takara-hard");
   if(sp) sp.classList.toggle("hard-on", d==="hard");
+  if(sp) sp.classList.toggle("himonora-on", d==="himonora");
 }
 document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
 document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
 document.getElementById("diffTakara").onclick=()=>setDifficulty("takara");
 document.getElementById("diffTakaraHard").onclick=()=>setDifficulty("takara-hard");
+document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 
 // ===== 待合室の沼津ミニ情報スライド =====
 // イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
