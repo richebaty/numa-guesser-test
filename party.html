@@ -600,8 +600,8 @@
   .h-card{ max-width:100%; max-height:180px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
   .h-fail{ font-size:14px; color:#666; line-height:1.5; margin-top:6px; }
   /* diffボタン */
-  #diffHimonora{ background:#6b0000; color:#fff; border-color:#6b0000; }
-  #diffHimonora.active{ background:#430000; }
+  #diffHimonora{ background:transparent; color:#6b0000; border-color:#6b0000; }
+  #diffHimonora.active{ background:#6b0000; color:#fff; border-color:#6b0000; }
 </style>
 <!-- Firebase (対戦機能用) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -793,7 +793,7 @@
           <button class="diff-btn" id="diffHard">むずかしい</button>
           <button class="diff-btn" id="diffTakara">ぬまづの宝100選</button>
           <button class="diff-btn" id="diffTakaraHard">宝100選ハード</button>
-          <button class="diff-btn" id="diffHimonora">🎯ヒモノラを探せ！</button>
+          <button class="diff-btn" id="diffHimonora">ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
       </div>
@@ -1237,9 +1237,17 @@ async function startRound(){
     himonoraCurrentAnchor=a;
     himonoraRoundIdx++;
     // 座標ベースでOUTDOOR StreetViewを探す（panoId直指定は屋内写真で黒くなるため）
-    const svH=new google.maps.StreetViewService();
-    found=await findPanoAt(svH, {lat:a.lat, lng:a.lng, r:300, jit:0, takara:true, name:a.name, yomi:"", note:null});
-    found.note=null;
+    const _targetPos=new google.maps.LatLng(a.lat, a.lng);
+    if(a.panoId && !a.panoId.startsWith("CIHM")){
+      // 屋外panoId → 直接セット（正確な場所を表示）
+      found={panoId:a.panoId, pos:_targetPos, hint:a.name, yomi:"", note:null};
+    } else {
+      // CIHMまたは屋内写真球 → 座標から近くの屋外SVを探す
+      const svH=new google.maps.StreetViewService();
+      found=await findPanoAt(svH, {lat:a.lat, lng:a.lng, r:300, jit:0, takara:true, name:a.name, yomi:"", note:null});
+      found.pos=_targetPos; // 答え位置は常にカードの座標
+      found.note=null;
+    }
   } else {
     // 一人用、または万一panoが配られていない場合は自分で探す
     const sv=new google.maps.StreetViewService();
@@ -1319,6 +1327,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
   }
   document.getElementById("totalScore").textContent=total.toLocaleString();
   if(isVersus) document.getElementById("oppbarMe").textContent=total.toLocaleString();
+  if(difficulty!=="himonora") document.getElementById("ptsVal").textContent=pts;
   const rm=new google.maps.Map(document.getElementById("resultMap"),{center:target.latLng,zoom:13,disableDefaultUI:true,gestureHandling:"none"});
   if(guessLatLng){
     new google.maps.Marker({position:guessLatLng,map:rm,icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:"#ee7a52",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
@@ -1340,7 +1349,6 @@ function submitGuess(fromTimer=false, noAnswer=false){
     setTimeout(()=>{ google.maps.event.trigger(rm,"resize"); rm.setCenter(target.latLng); rm.setZoom(14); },250);
   }
   document.getElementById("distVal").textContent = (km===null) ? "—" : (km<1 ? Math.round(km*1000)+"m" : km.toFixed(2)+"km");
-  document.getElementById("ptsVal").textContent=pts;
   setPlaceName(target.hint, target.yomi);
   const tn=document.getElementById("takaraNote");
   if(tn){
@@ -1576,6 +1584,8 @@ function showFinal(){
     document.getElementById("finalVerdict").style.display="none";
     document.getElementById("finalBoard").style.display="none";
     document.getElementById("restartBtn").style.display="";
+    const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
+    document.getElementById("finalOverlay").querySelector("h2").textContent="ヒモノラ捜索 結果";
     showBestScore();
     document.getElementById("finalOverlay").classList.add("show");
     return;
@@ -1649,10 +1659,12 @@ function showBestScore(){
   const best=Math.max(prev,total);
   if(isNew){
     bestRow.className="best-row newbest";
-    bestText.innerHTML=modeLabel+"モード 自己ベスト更新！ "+total.toLocaleString()+"点 <span class=\"badge\">NEW</span>";
+    const _fmt=difficulty==="himonora"?"¥"+total.toLocaleString():total.toLocaleString()+"点";
+    bestText.innerHTML=modeLabel+"モード 自己ベスト更新！ "+_fmt+" <span class=\"badge\">NEW</span>";
   } else {
     bestRow.className="best-row";
-    bestText.textContent=modeLabel+"モード 自己ベスト "+best.toLocaleString()+"点";
+    const _fmtB=difficulty==="himonora"?"¥"+best.toLocaleString():best.toLocaleString()+"点";
+    bestText.textContent=modeLabel+"モード 自己ベスト "+_fmtB;
   }
   bestRow.style.display="block";
 }
@@ -1780,6 +1792,8 @@ async function ensureGoogle(){
 async function begin(){
   if(!await ensureGoogle()) return;
   isVersus=false;
+  myReview=[]; total=0; round=0;
+  himonoraRoundIdx=0; himonoraAlive=true;
   document.getElementById("oppbar").style.display="none";
   buildRoundOrder();
   document.getElementById("splash").classList.add("hide");
