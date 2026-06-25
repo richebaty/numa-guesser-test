@@ -553,13 +553,20 @@
   }
   #himonoraCardReveal.show{ display:flex; }
   .h-cf-wrap{ perspective:900px; }
+  @keyframes himFlip{
+    0%  { transform:rotateY(180deg) scale(0.75); }
+    78% { transform:rotateY(1360deg) scale(1); }
+    90% { transform:rotateY(1454deg) scale(1.02); }
+    100%{ transform:rotateY(1440deg) scale(1); }
+  }
   .h-cf-inner{
     width:220px; height:310px;
     transform-style:preserve-3d;
-    transform:rotateY(180deg) scale(0.7);
-    transition:transform 0.75s cubic-bezier(.4,0,.2,1);
+    transform:rotateY(180deg) scale(0.75);
   }
-  .h-cf-inner.flipped{ transform:rotateY(0deg) scale(1); }
+  .h-cf-inner.flipped{
+    animation:himFlip 1.35s ease forwards;
+  }
   .h-cf-front,.h-cf-back{
     position:absolute; inset:0; backface-visibility:hidden;
     border-radius:14px; overflow:hidden;
@@ -567,11 +574,9 @@
   }
   .h-cf-front img{ width:100%; height:100%; object-fit:cover; }
   .h-cf-back{
-    background:#6b0000; transform:rotateY(180deg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:#333; transform:rotateY(180deg);
   }
-  .h-cf-back-title{ color:#f0e8cc; font-size:15px; letter-spacing:.1em; }
-  .h-cf-back-icon{ font-size:52px; }
+  .h-cf-back img{ width:100%; height:100%; object-fit:cover; border-radius:14px; }
   .h-cf-tap{ color:rgba(255,255,255,0.7); font-size:13px; margin-top:18px; }
   /* ===== ヒモノラを探せ！モード ===== */
   .himonora-bg{
@@ -653,8 +658,7 @@
       <div class="h-cf-inner" id="hCFInner">
         <div class="h-cf-front"><img id="hCFFrontImg" src="" alt=""></div>
         <div class="h-cf-back">
-          <div class="h-cf-back-icon">🐟</div>
-          <div class="h-cf-back-title">ヒモノラ<br>捕獲カード</div>
+          <img id="hCFBackImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
         </div>
       </div>
     </div>
@@ -1043,11 +1047,11 @@ const TAKARA_ANCHORS = [
 ];
 // ===== ヒモノラを探せ！データ =====
 const HIMONORA_ANCHORS = [
-  {no:10, name:"髙嶋酒造株式会社", lat:35.1263674, lng:138.7933641, panoId:"LoRNo_UoAm7JJQwlA3Nt4Q", heading:171.14, pitch:-1.09,  photo:"photo_10.jpg", card:"photo_10.jpg"},
-  {no:12, name:"沼津港",           lat:35.0824007, lng:138.8566802, panoId:"CIHM0ogKEICAgICci6LrbA", heading:261.76, pitch:-6.27,  photo:"photo_12.jpg", card:"photo_12.jpg"},
-  {no:24, name:"八畳石",           lat:35.1500578, lng:138.8236978, panoId:"06Wu_dyFUAc6a3dHGoLaCQ", heading:69.01,  pitch:20.03,  photo:"photo_24.jpg", card:"photo_24.jpg"},
-  {no:30, name:"つじ写真館",       lat:35.0969603, lng:138.8525721, panoId:"6mkbVhYuYtVSomp0O8AgWg", heading:139.38, pitch:-7.98,  photo:"photo_30.jpg", card:"photo_30.jpg"},
-  {no:33, name:"万葉の湯",         lat:35.1351942, lng:138.8690457, panoId:"CIHM0ogKEICAgIDqo_PNCg", heading:338.99, pitch:8.82,   photo:"photo_33.jpg", card:"photo_33.jpg"},
+  {no:10, name:"髙嶋酒造株式会社", lat:35.1263674, lng:138.7933641, panoId:"LoRNo_UoAm7JJQwlA3Nt4Q", heading:171.14, pitch:-1.09,  photo:"photo_10.jpg", card:"card_10.jpg"},
+  {no:12, name:"沼津港",           lat:35.0824007, lng:138.8566802, panoId:"CIHM0ogKEICAgICci6LrbA", heading:261.76, pitch:-6.27,  photo:"photo_12.jpg", card:"card_12.jpg"},
+  {no:24, name:"八畳石",           lat:35.1500578, lng:138.8236978, panoId:"06Wu_dyFUAc6a3dHGoLaCQ", heading:69.01,  pitch:20.03,  photo:"photo_24.jpg", card:"card_24.jpg"},
+  {no:30, name:"つじ写真館",       lat:35.0969603, lng:138.8525721, panoId:"6mkbVhYuYtVSomp0O8AgWg", heading:139.38, pitch:-7.98,  photo:"photo_30.jpg", card:"card_30.jpg"},
+  {no:33, name:"万葉の湯",         lat:35.1351942, lng:138.8690457, panoId:"CIHM0ogKEICAgIDqo_PNCg", heading:338.99, pitch:8.82,   photo:"photo_33.jpg", card:"card_33.jpg"},
 ];
 let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true;
 const POINTS_PER_ROUND = 5000;
@@ -1409,7 +1413,10 @@ function showHimonoraCardThen(done){
     ov.onclick=null;
     setTimeout(done, 200);
   };
-  const src=himonoraCurrentAnchor.card||himonoraCurrentAnchor.photo;
+  const frontSrc=himonoraCurrentAnchor.photo;
+  const backSrc=himonoraCurrentAnchor.card||himonoraCurrentAnchor.photo;
+  const backImg=document.getElementById("hCFBackImg");
+  if(backImg) backImg.src=backSrc;
   img.onload=()=>{
     inner.classList.remove("flipped");
     ov.classList.add("show");
@@ -1418,7 +1425,7 @@ function showHimonoraCardThen(done){
     hCFTimer=setTimeout(finish, 3500);
   };
   img.onerror=()=>done();
-  img.src=src;
+  img.src=frontSrc;
 }
 
 // note の「No.016」から番号を取り出す（無ければ null）
