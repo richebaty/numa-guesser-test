@@ -549,35 +549,59 @@
   #himonoraCardReveal{
     position:fixed; inset:0; z-index:250; display:none;
     flex-direction:column; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.78);
+    background:rgba(0,0,0,0.85);
+    transition:background 0.2s;
   }
   #himonoraCardReveal.show{ display:flex; }
-  .h-cf-wrap{ perspective:900px; }
+  #himonoraCardReveal.flash{ background:rgba(255,220,80,0.35); }
+  .h-cf-wrap{ perspective:1400px; position:relative; }
   @keyframes himFlip{
-    0%  { transform:rotateY(180deg) scale(0.75); }
+    0%  { transform:rotateY(180deg) scale(0.6); }
     78% { transform:rotateY(1360deg) scale(1); }
-    90% { transform:rotateY(1454deg) scale(1.02); }
+    90% { transform:rotateY(1454deg) scale(1.03); }
     100%{ transform:rotateY(1440deg) scale(1); }
   }
+  @keyframes himStamp{
+    0%  { opacity:0; transform:scale(2.5) rotate(-12deg); }
+    60% { opacity:1; transform:scale(0.92) rotate(-12deg); }
+    75% { transform:scale(1.06) rotate(-12deg); }
+    100%{ opacity:1; transform:scale(1) rotate(-12deg); }
+  }
   .h-cf-inner{
-    width:220px; height:310px;
+    width:min(78vw,340px); height:min(109vw,476px);
     transform-style:preserve-3d;
-    transform:rotateY(180deg) scale(0.75);
+    transform:rotateY(180deg) scale(0.6);
   }
   .h-cf-inner.flipped{
     animation:himFlip 1.35s ease forwards;
   }
   .h-cf-front,.h-cf-back{
     position:absolute; inset:0; backface-visibility:hidden;
-    border-radius:14px; overflow:hidden;
-    box-shadow:0 10px 40px rgba(0,0,0,0.6);
+    border-radius:16px; overflow:hidden;
+    box-shadow:0 16px 60px rgba(0,0,0,0.7);
   }
   .h-cf-front img{ width:100%; height:100%; object-fit:cover; }
   .h-cf-back{
     background:#333; transform:rotateY(180deg);
   }
-  .h-cf-back img{ width:100%; height:100%; object-fit:cover; border-radius:14px; }
-  .h-cf-tap{ color:rgba(255,255,255,0.7); font-size:13px; margin-top:18px; }
+  .h-cf-back img{ width:100%; height:100%; object-fit:cover; border-radius:16px; }
+  #hCFStamp{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; opacity:0;
+  }
+  #hCFStamp span{
+    font-size:min(22vw,96px); font-weight:900; letter-spacing:.05em;
+    color:rgba(220,30,30,0.9);
+    border:min(1.2vw,5px) solid rgba(220,30,30,0.85);
+    border-radius:8px; padding:2px 12px;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.25);
+    box-shadow:0 0 0 min(0.6vw,3px) rgba(220,30,30,0.4);
+    transform:rotate(-12deg);
+    line-height:1.1;
+  }
+  #hCFStamp.show{ animation:himStamp 0.45s cubic-bezier(.2,0,.1,1) forwards; }
+  .h-cf-tap{ color:rgba(255,255,255,0.65); font-size:13px; margin-top:16px; }
   /* ===== ヒモノラを探せ！モード ===== */
   .himonora-bg{
     position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s;
@@ -656,7 +680,7 @@
   <div id="himonoraCardReveal">
     <div class="h-cf-wrap">
       <div class="h-cf-inner" id="hCFInner">
-        <div class="h-cf-front"><img id="hCFFrontImg" src="" alt=""></div>
+        <div class="h-cf-front"><img id="hCFFrontImg" src="" alt=""><div id="hCFStamp"><span>捕獲！</span></div></div>
         <div class="h-cf-back">
           <img id="hCFBackImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
         </div>
@@ -1419,6 +1443,7 @@ function showHimonoraCardThen(done){
     ov.classList.remove("show");
     inner.classList.remove("flipped");
     ov.onclick=null;
+    const _st=document.getElementById("hCFStamp"); if(_st) _st.classList.remove("show");
     setTimeout(done, 200);
   };
   const frontSrc=himonoraCurrentAnchor.photo;
@@ -1429,8 +1454,15 @@ function showHimonoraCardThen(done){
     inner.classList.remove("flipped");
     ov.classList.add("show");
     setTimeout(()=>inner.classList.add("flipped"), 350);
+    // フリップ完了後にスタンプ＋フラッシュ
+    setTimeout(()=>{
+      ov.classList.add("flash");
+      const stamp=document.getElementById("hCFStamp");
+      if(stamp) stamp.classList.add("show");
+      setTimeout(()=>ov.classList.remove("flash"),300);
+    }, 350+1350);
     ov.onclick=finish;
-    hCFTimer=setTimeout(finish, 3500);
+    hCFTimer=setTimeout(finish, 4500);
   };
   img.onerror=()=>done();
   img.src=frontSrc;
