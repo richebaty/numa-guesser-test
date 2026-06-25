@@ -545,6 +545,34 @@
     color:rgba(255,255,255,0.7); font-size:10px; letter-spacing:0.5px;
     text-shadow:0 1px 3px rgba(0,0,0,0.5); pointer-events:none;
   }
+  /* ===== ヒモノラ カードフリップ ===== */
+  #himonoraCardReveal{
+    position:fixed; inset:0; z-index:250; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.78);
+  }
+  #himonoraCardReveal.show{ display:flex; }
+  .h-cf-wrap{ perspective:900px; }
+  .h-cf-inner{
+    width:220px; height:310px;
+    transform-style:preserve-3d;
+    transform:rotateY(180deg) scale(0.7);
+    transition:transform 0.75s cubic-bezier(.4,0,.2,1);
+  }
+  .h-cf-inner.flipped{ transform:rotateY(0deg) scale(1); }
+  .h-cf-front,.h-cf-back{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 10px 40px rgba(0,0,0,0.6);
+  }
+  .h-cf-front img{ width:100%; height:100%; object-fit:cover; }
+  .h-cf-back{
+    background:#6b0000; transform:rotateY(180deg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  }
+  .h-cf-back-title{ color:#f0e8cc; font-size:15px; letter-spacing:.1em; }
+  .h-cf-back-icon{ font-size:52px; }
+  .h-cf-tap{ color:rgba(255,255,255,0.7); font-size:13px; margin-top:18px; }
   /* ===== ヒモノラを探せ！モード ===== */
   .himonora-bg{
     position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s;
@@ -619,6 +647,20 @@
   </div>
 
   <!-- 宝100選 正解写真（回答後・結果の直前に数秒表示） -->
+  <!-- ヒモノラ カードフリップ -->
+  <div id="himonoraCardReveal">
+    <div class="h-cf-wrap">
+      <div class="h-cf-inner" id="hCFInner">
+        <div class="h-cf-front"><img id="hCFFrontImg" src="" alt=""></div>
+        <div class="h-cf-back">
+          <div class="h-cf-back-icon">🐟</div>
+          <div class="h-cf-back-title">ヒモノラ<br>捕獲カード</div>
+        </div>
+      </div>
+    </div>
+    <div class="h-cf-tap">タップで すすむ</div>
+  </div>
+
   <div class="photo-reveal" id="photoReveal">
     <div class="photo-reveal-inner">
       <img id="photoRevealImg" alt="">
@@ -1001,11 +1043,11 @@ const TAKARA_ANCHORS = [
 ];
 // ===== ヒモノラを探せ！データ =====
 const HIMONORA_ANCHORS = [
-  {no:10, name:"髙嶋酒造株式会社", lat:35.1263674, lng:138.7933641, panoId:"LoRNo_UoAm7JJQwlA3Nt4Q", heading:171.14, pitch:-1.09,  photo:"photo_10.jpg"},
-  {no:12, name:"沼津港",           lat:35.0824007, lng:138.8566802, panoId:"CIHM0ogKEICAgICci6LrbA", heading:261.76, pitch:-6.27,  photo:"photo_12.jpg"},
-  {no:24, name:"八畳石",           lat:35.1500578, lng:138.8236978, panoId:"06Wu_dyFUAc6a3dHGoLaCQ", heading:69.01,  pitch:20.03,  photo:"photo_24.jpg"},
-  {no:30, name:"つじ写真館",       lat:35.0969603, lng:138.8525721, panoId:"6mkbVhYuYtVSomp0O8AgWg", heading:139.38, pitch:-7.98,  photo:"photo_30.jpg"},
-  {no:33, name:"万葉の湯",         lat:35.1351942, lng:138.8690457, panoId:"CIHM0ogKEICAgIDqo_PNCg", heading:338.99, pitch:8.82,   photo:"photo_33.jpg"},
+  {no:10, name:"髙嶋酒造株式会社", lat:35.1263674, lng:138.7933641, panoId:"LoRNo_UoAm7JJQwlA3Nt4Q", heading:171.14, pitch:-1.09,  photo:"photo_10.jpg", card:"photo_10.jpg"},
+  {no:12, name:"沼津港",           lat:35.0824007, lng:138.8566802, panoId:"CIHM0ogKEICAgICci6LrbA", heading:261.76, pitch:-6.27,  photo:"photo_12.jpg", card:"photo_12.jpg"},
+  {no:24, name:"八畳石",           lat:35.1500578, lng:138.8236978, panoId:"06Wu_dyFUAc6a3dHGoLaCQ", heading:69.01,  pitch:20.03,  photo:"photo_24.jpg", card:"photo_24.jpg"},
+  {no:30, name:"つじ写真館",       lat:35.0969603, lng:138.8525721, panoId:"6mkbVhYuYtVSomp0O8AgWg", heading:139.38, pitch:-7.98,  photo:"photo_30.jpg", card:"photo_30.jpg"},
+  {no:33, name:"万葉の湯",         lat:35.1351942, lng:138.8690457, panoId:"CIHM0ogKEICAgIDqo_PNCg", heading:338.99, pitch:8.82,   photo:"photo_33.jpg", card:"photo_33.jpg"},
 ];
 let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true;
 const POINTS_PER_ROUND = 5000;
@@ -1339,10 +1381,44 @@ function submitGuess(fromTimer=false, noAnswer=false){
     roomRef.child("players/"+myId).update(upd);
     updateResultVs();
   }
-  // 宝100選で写真があれば、結果の前に数秒だけ正解写真を見せる
-  showTakaraPhotoThen(()=>{
-    document.getElementById("resultOverlay").classList.add("show");
-  });
+  // ヒモノラ成功時はカードフリップ→結果、その他は宝100選フォト→結果
+  if(difficulty==="himonora" && himonoraAlive){
+    showHimonoraCardThen(()=>{
+      document.getElementById("resultOverlay").classList.add("show");
+    });
+  } else {
+    showTakaraPhotoThen(()=>{
+      document.getElementById("resultOverlay").classList.add("show");
+    });
+  }
+}
+
+// ヒモノラカードフリップ：成功時にカード画像をフリップして見せる
+let hCFTimer=null;
+function showHimonoraCardThen(done){
+  const ov=document.getElementById("himonoraCardReveal");
+  const inner=document.getElementById("hCFInner");
+  const img=document.getElementById("hCFFrontImg");
+  if(!ov||!himonoraCurrentAnchor){ done(); return; }
+  let finished=false;
+  const finish=()=>{
+    if(finished) return; finished=true;
+    if(hCFTimer){ clearTimeout(hCFTimer); hCFTimer=null; }
+    ov.classList.remove("show");
+    inner.classList.remove("flipped");
+    ov.onclick=null;
+    setTimeout(done, 200);
+  };
+  const src=himonoraCurrentAnchor.card||himonoraCurrentAnchor.photo;
+  img.onload=()=>{
+    inner.classList.remove("flipped");
+    ov.classList.add("show");
+    setTimeout(()=>inner.classList.add("flipped"), 350);
+    ov.onclick=finish;
+    hCFTimer=setTimeout(finish, 3500);
+  };
+  img.onerror=()=>done();
+  img.src=src;
 }
 
 // note の「No.016」から番号を取り出す（無ければ null）
@@ -1488,7 +1564,7 @@ function showFinal(){
     const rl=document.getElementById("finalRankLabel"); if(rl) rl.innerHTML="捕獲数";
     document.getElementById("finalTanka").textContent=successRounds===0?"今度こそヒモノラを見つけよう！":"よくやった！ヒモノラ研究所に報告せよ！";
     const _seal=document.getElementById("finalSeal");
-    if(_seal) _seal.textContent=successRounds===0?"逃":"捕";
+    if(_seal) _seal.textContent=successRounds===0?"逃":"祝";
     document.getElementById("finalVsRow").style.display="none";
     document.getElementById("finalVerdict").style.display="none";
     document.getElementById("finalBoard").style.display="none";
