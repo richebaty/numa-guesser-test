@@ -947,6 +947,7 @@ let playersCache={};     // 全プレイヤーの最新状態 {id:{name,total,ro
 let lobbyReady=false;    // 主催者がスタートを押したか
 let syncTimer=null;      // 待ち合わせのタイムアウト用
 let sharedPanos=null;    // 主催者が用意した5問ぶんの風景（全員共通）
+let himSharedPanos=null; // ヒモノラ対戦：主催者が用意した共通アンカー配列
 let myReview=[];         // 一人用の各問記録（振り返り用）
 
 const NUMAZU = { center:{lat:35.0960, lng:138.8634} };
@@ -1273,8 +1274,18 @@ async function startRound(){
   if(isVersus){ roomRef.child("players/"+myId).update({ round:round, alive:true }); }
 
   let found;
-  if(isVersus && sharedPanos && sharedPanos[round-1]){
-    // 対戦：主催者が用意した共通の風景を使う（待たない＝固まらない）
+  if(isVersus && difficulty==="himonora" && himSharedPanos){
+    // ヒモノラ対戦：主催者が用意した共通アンカーを使う
+    const a=himSharedPanos[round-1];
+    if(!a){
+      // アンカーが尽きた（全捕獲クリア）→ゲーム終了
+      showFinal(); return;
+    }
+    himonoraCurrentAnchor=a; // photoやcard含む完全なアンカーオブジェクト
+    himonoraRoundIdx=round;
+    found={panoId:a.panoId, pos:new google.maps.LatLng(a.lat,a.lng), hint:a.name, yomi:"", note:null};
+  } else if(isVersus && sharedPanos && sharedPanos[round-1]){
+    // 通常対戦：主催者が用意した共通の風景を使う（待たない＝固まらない）
     const v=sharedPanos[round-1];
     found={panoId:v.panoId, pos:new google.maps.LatLng(v.lat,v.lng), hint:v.hint, yomi:v.yomi||"", note:v.note||null};
   } else if(difficulty==="himonora"){
@@ -1432,7 +1443,9 @@ function submitGuess(fromTimer=false, noAnswer=false){
       }
     });
   }
-  document.getElementById("nextBtn").textContent = difficulty==="himonora"?(himonoraAlive?"次の獲物へ →":"結果を見る →"):(round>=MAX_ROUNDS?"結果を見る →":"次の問題へ →");
+  document.getElementById("nextBtn").textContent = difficulty==="himonora"
+    ? (himonoraAlive ? "次の獲物へ →" : (isVersus ? "待機する →" : "結果を見る →"))
+    : (round>=MAX_ROUNDS ? "結果を見る →" : "次の問題へ →");
 
   if(!isVersus){
     const g = guessLatLng ? {lat:guessLatLng.lat(), lng:guessLatLng.lng()} : null;
@@ -1448,6 +1461,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     const g = guessLatLng ? {lat:guessLatLng.lat(), lng:guessLatLng.lng()} : null;
     const upd = { total: total, round: round };
     upd["guesses/"+round] = { pts: pts, lat: g?g.lat:null, lng: g?g.lng:null };
+    if(difficulty==="himonora") upd.himCapture = himonoraAlive; // 捕獲結果を共有
     roomRef.child("players/"+myId).update(upd);
     updateResultVs();
   }
@@ -1553,6 +1567,23 @@ function next(){
     const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.innerHTML='<ruby>獲得点<rt>かくとくてん</rt></ruby>';
   }
   if(difficulty==="himonora"){
+    if(isVersus){
+      // 対戦ヒモノラ：全員が回答するまで待つ。全員失敗なら終了、誰か捕獲なら続行
+      roomRef.child("players/"+myId).update({ ready:true, round:round });
+      waitForEveryoneThen(()=>{
+        // この round で himCapture:true の人が1人でもいれば続行
+        const anyCapture = Object.values(playersCache).some(p => p && p.himCapture===true);
+        if(!anyCapture){
+          roomRef.child("players/"+myId).update({ finished:true, himCapture:false, ready:false });
+          showFinal();
+        } else {
+          // 次ラウンドのためにリセット
+          roomRef.child("players/"+myId).update({ himCapture:false, ready:false });
+          startRound();
+        }
+      });
+      return;
+    }
     if(!himonoraAlive) showFinal(); else startRound();
     return;
   }
@@ -1620,10 +1651,11 @@ function updateResultVs(){
   if(!isVersus){ el.textContent=""; return; }
   const arr=rankingLines();
   const myRank=arr.findIndex(p=>p.id===myId)+1;
+  const fmtScore=v=>difficulty==="himonora"?"¥"+v.toLocaleString()+"円":v.toLocaleString()+"点";
   el.innerHTML = `<div style="font-weight:bold;margin-bottom:4px;">いまの順位：${myRank}位 / ${arr.length}人</div>` +
     arr.slice(0,8).map((p,i)=>{
       const mine = p.id===myId ? ' style="color:var(--coral);font-weight:bold;"' : '';
-      return `<div${mine}>${i+1}. ${escapeHtml(p.name)} … ${p.total.toLocaleString()}点</div>`;
+      return `<div${mine}>${i+1}. ${escapeHtml(p.name)} … ${fmtScore(p.total||0)}</div>`;
     }).join("");
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -1663,12 +1695,23 @@ function showFinal(){
     const _seal=document.getElementById("finalSeal");
     if(_seal) _seal.textContent=successRounds===0?"逃":"祝";
     document.getElementById("finalVsRow").style.display="none";
-    document.getElementById("finalVerdict").style.display="none";
-    document.getElementById("finalBoard").style.display="none";
-    document.getElementById("restartBtn").style.display="";
-    const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
     const _fh2=document.getElementById("finalOverlay").querySelector("h2"); if(_fh2) _fh2.textContent="ヒモノラ捜索 結果";
-    showBestScore();
+    if(isVersus){
+      // 対戦ヒモノラ：順位表を表示
+      document.getElementById("finalVerdict").style.display="block";
+      document.getElementById("finalBoard").style.display="none";
+      document.getElementById("restartBtn").style.display="none";
+      const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
+      finalShowing=true;
+      if(isHost){ roomRef.child("players/"+myId).update({finished:true}); }
+      renderFinalBoard();
+    } else {
+      document.getElementById("finalVerdict").style.display="none";
+      document.getElementById("finalBoard").style.display="none";
+      document.getElementById("restartBtn").style.display="";
+      const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
+      showBestScore();
+    }
     document.getElementById("finalOverlay").classList.add("show");
     return;
   }
@@ -1718,12 +1761,13 @@ function renderFinalBoard(){
   const board=document.getElementById("finalBoard");
   board.style.display="block";
   const title = everyoneDone ? "最終順位" : `順位（${finishedCount}/${all.length}人 終了）`;
+  const fmtScore=v=>difficulty==="himonora"?"¥"+v.toLocaleString()+"円":v.toLocaleString()+"点";
   board.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${title}</div>` +
     arr.map((p,i)=>{
       const mine = p.id===myId ? ' style="color:var(--coral);font-weight:bold;"' : '';
       const medal = everyoneDone ? (i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)+".") : ((i+1)+".");
       const playing = (p.finished===true) ? "" : ` <span style="color:var(--sea);font-size:13px;">…プレイ中</span>`;
-      return `<div${mine}>${medal} ${escapeHtml(p.name)} … ${(p.total||0).toLocaleString()}点${playing}</div>`;
+      return `<div${mine}>${medal} ${escapeHtml(p.name)} … ${fmtScore(p.total||0)}${playing}</div>`;
     }).join("");
 }
 // 一人用：その端末の自己ベストを記録・表示（保存できない環境では静かに非表示）
@@ -1985,11 +2029,16 @@ function enterLobby(){
   roomRef.child("started").on("value", async snap=>{
     if(snap.val()===true){
       roomRef.child("started").off();
-      // 全員共通の5問ぶんの風景を取得
+      // 全員共通の風景（またはヒモノラアンカー）を取得
       try{
-        const ps=await roomRef.child("panos").get();
-        sharedPanos = ps.exists() ? ps.val() : null;
-      }catch(e){ sharedPanos=null; }
+        if(difficulty==="himonora"){
+          const hp=await roomRef.child("himPanos").get();
+          himSharedPanos = hp.exists() ? hp.val() : null;
+        } else {
+          const ps=await roomRef.child("panos").get();
+          sharedPanos = ps.exists() ? ps.val() : null;
+        }
+      }catch(e){ sharedPanos=null; himSharedPanos=null; }
       document.getElementById("lobbyOverlay").classList.remove("show");
       stopMini();
       document.getElementById("oppbar").style.display="flex";
@@ -2018,7 +2067,26 @@ async function lobbyStart(){
   const btn=document.getElementById("lobbyStartBtn");
   btn.disabled=true; btn.textContent="準備中…";
   if(!await ensureGoogle()){ btn.disabled=false; return; }
-  // 5問ぶんの風景を主催者がまとめて決めて、全員に配る（各自ペースでも同じ問題になる）
+  if(difficulty==="himonora"){
+    // ヒモノラ対戦：全アンカーをシャッフルしてpanoId解決済みリストをFirebaseに共有
+    const svH=new google.maps.StreetViewService();
+    const anchors=shuffle(HIMONORA_ANCHORS.slice());
+    const himPanos=[];
+    for(let i=0;i<anchors.length;i++){
+      const a=anchors[i];
+      let panoId=a.panoId||"";
+      if(!panoId||panoId.startsWith("CIHM")){
+        try{
+          const f=await findPanoAt(svH,{lat:a.lat,lng:a.lng,r:300,jit:0,takara:true,name:a.name,yomi:"",note:null});
+          panoId=f.panoId||"";
+        }catch(e){}
+      }
+      himPanos.push({panoId,lat:a.lat,lng:a.lng,name:a.name,heading:a.heading||0,pitch:a.pitch||0,photo:a.photo,card:a.card,no:a.no});
+    }
+    await roomRef.update({ himPanos, started:true, state:"playing" });
+    return;
+  }
+  // 通常モード：5問ぶんの風景を主催者がまとめて決めて全員に配る
   const sv=new google.maps.StreetViewService();
   const panos=[];
   for(let i=0;i<MAX_ROUNDS;i++){
@@ -2034,7 +2102,7 @@ function listenScores(){
   roomRef.child("players").on("value", snap=>{
     playersCache = snap.val() || {};
     const me = playersCache[myId];
-    document.getElementById("oppbarMe").textContent=(total||0).toLocaleString();
+    document.getElementById("oppbarMe").textContent=difficulty==="himonora"?"¥"+(total||0).toLocaleString():(total||0).toLocaleString();
     // バーには自分の順位を出す
     const arr=rankingLines();
     const myRank=arr.findIndex(p=>p.id===myId)+1;
