@@ -717,8 +717,8 @@
       <div class="sub">RESULT</div>
       <div class="resultmap" id="resultMap"></div>
       <div class="stat-row">
-        <div class="stat"><div class="n" id="distVal">—</div><div class="l">きょり</div></div>
-        <div class="stat"><div class="n" id="ptsVal">—</div><div class="l"><ruby>獲得点<rt>かくとくてん</rt></ruby></div></div>
+        <div class="stat"><div class="n" id="distVal">—</div><div class="l" id="distLabel">きょり</div></div>
+        <div class="stat"><div class="n" id="ptsVal">—</div><div class="l" id="ptsLabel"><ruby>獲得点<rt>かくとくてん</rt></ruby></div></div>
       </div>
       <div class="placename" id="placeName">— 沼津市 —</div>
       <div id="himonoraArea">
@@ -1344,7 +1344,20 @@ function submitGuess(fromTimer=false, noAnswer=false){
     himonoraAlive=(prize>0);
     const _rSeal=document.getElementById("resultSeal");
     if(_rSeal) _rSeal.textContent=prize>0?"捕獲":"逃";
-    document.getElementById("ptsVal").textContent=prize>0?"¥"+prize.toLocaleString():"捕獲失敗";
+    if(prize>0){
+      document.getElementById("ptsVal").textContent="¥"+prize.toLocaleString();
+      const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
+      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="きょり";
+      const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
+    } else {
+      // 失敗時：捕獲数と累計賞金を表示
+      const capturesSoFar=round-1;
+      document.getElementById("distVal").textContent=capturesSoFar+"匹";
+      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="捕獲数";
+      const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
+      document.getElementById("ptsVal").textContent="¥"+total.toLocaleString();
+      const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
+    }
     const hArea=document.getElementById("himonoraArea");
     if(hArea){
       hArea.style.display="block";
@@ -1358,7 +1371,6 @@ function submitGuess(fromTimer=false, noAnswer=false){
     // 失敗時は答えの場所を隠す（次回に覚えられないよう）
     document.getElementById("resultMap").style.display=prize>0?"":"none";
     document.getElementById("placeName").style.display=prize>0?"":"none";
-    const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display=prize>0?"":"none";
   } else {
     total+=pts;
   }
@@ -1516,6 +1528,10 @@ function showTakaraPhotoThen(done){
 function next(){
   document.getElementById("resultOverlay").classList.remove("show");
   const _rs2=document.getElementById("resultSeal"); if(_rs2 && difficulty!=="himonora") _rs2.textContent="答";
+  if(difficulty!=="himonora"){
+    const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="きょり";
+    const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.innerHTML='<ruby>獲得点<rt>かくとくてん</rt></ruby>';
+  }
   if(difficulty==="himonora"){
     if(!himonoraAlive) showFinal(); else startRound();
     return;
