@@ -712,7 +712,7 @@
   <!-- Round result -->
   <div class="overlay" id="resultOverlay">
     <div class="panel">
-      <div class="seal">答</div>
+      <div class="seal" id="resultSeal">答</div>
       <h2 id="resultTitle">お見事</h2>
       <div class="sub">RESULT</div>
       <div class="resultmap" id="resultMap"></div>
@@ -1342,6 +1342,8 @@ function submitGuess(fromTimer=false, noAnswer=false){
     else if(m<=100){prize=500;captureLabel="写真撮影";}
     total+=prize;
     himonoraAlive=(prize>0);
+    const _rSeal=document.getElementById("resultSeal");
+    if(_rSeal) _rSeal.textContent=prize>0?"捕獲":"逃";
     document.getElementById("ptsVal").textContent=prize>0?"¥"+prize.toLocaleString():"捕獲失敗";
     const hArea=document.getElementById("himonoraArea");
     if(hArea){
@@ -1513,6 +1515,7 @@ function showTakaraPhotoThen(done){
 }
 function next(){
   document.getElementById("resultOverlay").classList.remove("show");
+  const _rs2=document.getElementById("resultSeal"); if(_rs2 && difficulty!=="himonora") _rs2.textContent="答";
   if(difficulty==="himonora"){
     if(!himonoraAlive) showFinal(); else startRound();
     return;
@@ -1628,7 +1631,7 @@ function showFinal(){
     document.getElementById("finalBoard").style.display="none";
     document.getElementById("restartBtn").style.display="";
     const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
-    document.getElementById("finalOverlay").querySelector("h2").textContent="ヒモノラ捜索 結果";
+    const _fh2=document.getElementById("finalOverlay").querySelector("h2"); if(_fh2) _fh2.textContent="ヒモノラ捜索 結果";
     showBestScore();
     document.getElementById("finalOverlay").classList.add("show");
     return;
