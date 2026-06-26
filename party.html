@@ -1345,7 +1345,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     const _rSeal=document.getElementById("resultSeal");
     if(_rSeal) _rSeal.textContent=prize>0?"捕獲":"逃";
     if(prize>0){
-      document.getElementById("ptsVal").textContent="¥"+prize.toLocaleString();
+      document.getElementById("ptsVal").textContent="¥"+prize.toLocaleString()+"円";
       const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
       const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="きょり";
       const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
@@ -1355,14 +1355,14 @@ function submitGuess(fromTimer=false, noAnswer=false){
       document.getElementById("distVal").textContent=capturesSoFar+"匹";
       const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="捕獲数";
       const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
-      document.getElementById("ptsVal").textContent="¥"+total.toLocaleString();
+      document.getElementById("ptsVal").textContent="¥"+total.toLocaleString()+"円";
       const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
     }
     const hArea=document.getElementById("himonoraArea");
     if(hArea){
       hArea.style.display="block";
       document.getElementById("himonoraCaptureLabel").textContent=captureLabel;
-      document.getElementById("himonoraPrizeText").textContent=prize>0?"¥"+prize.toLocaleString():"";
+      document.getElementById("himonoraPrizeText").textContent=prize>0?"¥"+prize.toLocaleString()+"円":"";
       const img=document.getElementById("himonoraCardImg");
       if(prize>0&&himonoraCurrentAnchor){img.src=himonoraCurrentAnchor.photo;img.style.display="";}
       else img.style.display="none";
