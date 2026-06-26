@@ -1626,7 +1626,7 @@ function hideWait(){ document.getElementById("waitOverlay").classList.remove("sh
 function rankingLines(){
   const arr=Object.entries(playersCache)
     .filter(([id,p])=>p && p.alive!==false)
-    .map(([id,p])=>({id, name:p.name||"プレイヤー", total:p.total||0, finished:p.finished===true}))
+    .map(([id,p])=>({id, name:p.name||"プレイヤー", total:p.total||0, finished:p.finished===true, himCaptureCount:p.himCaptureCount??null}))
     .sort((a,b)=>b.total-a.total);
   return arr;
 }
@@ -1682,7 +1682,10 @@ function showFinal(){
     const _fh2=document.getElementById("finalOverlay").querySelector("h2"); if(_fh2) _fh2.textContent="ヒモノラ捜索 結果";
     if(isVersus){
       // 対戦ヒモノラ：捕獲数・賞金をFirebaseに書き込み、振り返りボードを表示
-      roomRef.child("players/"+myId).update({ finished:true, total:total, himCaptureCount:successRounds });
+      roomRef.child("players/"+myId).update({ finished:true, total:total, himCaptureCount:successRounds, alive:true });
+      // Firebase応答を待たずにローカルのplayersCacheを即時更新（自分が0位にならないよう）
+      if(!playersCache[myId]) playersCache[myId]={};
+      Object.assign(playersCache[myId], { finished:true, total:total, himCaptureCount:successRounds, alive:true });
       document.getElementById("finalVerdict").style.display="block";
       document.getElementById("finalBoard").style.display="none";
       document.getElementById("restartBtn").style.display="none";
@@ -1736,12 +1739,14 @@ function renderFinalBoard(){
   const verdict=document.getElementById("finalVerdict");
   if(difficulty==="himonora"){
     // ヒモノラ対戦：全員の結果が揃ったら順位を出す
-    const myCaptures = (playersCache[myId]||{}).himCaptureCount||0;
+    const myData = playersCache[myId]||{};
+    const myCaptures = myData.himCaptureCount??0;
+    const dispRank = myRank>0 ? myRank : arr.length+1; // 見つからない場合は最下位扱い
     if(everyoneDone){
-      if(myRank===1){ verdict.textContent="最多捕獲！🎉 ヒモノラ研究所の英雄"; verdict.className="final-verdict win"; }
-      else { verdict.textContent=`捕獲${myCaptures}匹・${myRank}位 / ${arr.length}人`; verdict.className="final-verdict draw"; }
+      if(dispRank===1){ verdict.textContent="最多捕獲！🎉 ヒモノラ研究所の英雄"; verdict.className="final-verdict win"; }
+      else { verdict.textContent=`捕獲${myCaptures}匹・${dispRank}位 / ${all.length}人`; verdict.className="final-verdict draw"; }
     } else {
-      verdict.textContent=`捕獲${myCaptures}匹・暫定${myRank}位（${finishedCount}/${all.length}人 終了）`;
+      verdict.textContent=`捕獲${myCaptures}匹・暫定${dispRank}位（${finishedCount}/${all.length}人 終了）`;
       verdict.className="final-verdict draw";
     }
   } else {
@@ -1764,7 +1769,7 @@ function renderFinalBoard(){
       const playing = (p.finished===true) ? "" : ` <span style="color:var(--sea);font-size:13px;">…プレイ中</span>`;
       let scoreStr;
       if(difficulty==="himonora"){
-        const cap = p.himCaptureCount!=null ? p.himCaptureCount+"匹" : "—";
+        const cap = p.himCaptureCount!=null ? p.himCaptureCount+"匹" : (p.finished ? "0匹" : "—");
         const prize = "¥"+(p.total||0).toLocaleString()+"円";
         scoreStr = `${cap} / ${prize}`;
       } else {
