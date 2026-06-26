@@ -1452,9 +1452,12 @@ function submitGuess(fromTimer=false, noAnswer=false){
   }
   // ヒモノラ成功時はカードフリップ→結果、その他は宝100選フォト→結果
   if(difficulty==="himonora" && himonoraAlive){
+    let _sText="捕獲", _sColor="rgba(220,30,30,0.92)";
+    if(prize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
+    else if(prize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
     showHimonoraCardThen(()=>{
       document.getElementById("resultOverlay").classList.add("show");
-    });
+    }, _sText, _sColor);
   } else {
     showTakaraPhotoThen(()=>{
       document.getElementById("resultOverlay").classList.add("show");
@@ -1464,7 +1467,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
 
 // ヒモノラカードフリップ：成功時にカード画像をフリップして見せる
 let hCFTimer=null;
-function showHimonoraCardThen(done){
+function showHimonoraCardThen(done, stampText, stampColor){
   const ov=document.getElementById("himonoraCardReveal");
   const inner=document.getElementById("hCFInner");
   const img=document.getElementById("hCFFrontImg");
@@ -1479,6 +1482,14 @@ function showHimonoraCardThen(done){
     const _st=document.getElementById("hCFStamp"); if(_st) _st.classList.remove("show");
     setTimeout(done, 200);
   };
+  // スタンプのテキストと色を設定
+  const stampSpan=document.querySelector("#hCFStamp span");
+  if(stampSpan){
+    stampSpan.textContent=stampText||"捕獲";
+    const c=stampColor||"rgba(220,30,30,0.92)";
+    stampSpan.style.color=c;
+    stampSpan.style.borderColor=c;
+  }
   const frontSrc=himonoraCurrentAnchor.photo;
   const backSrc=himonoraCurrentAnchor.card||himonoraCurrentAnchor.photo;
   const backImg=document.getElementById("hCFBackImg");
