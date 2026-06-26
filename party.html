@@ -1098,7 +1098,7 @@ const HIMONORA_ANCHORS = [
   {no:54, name:"沼津リバーサイドホテル",  lat:35.0970788, lng:138.8581065, panoId:"SzoD2Xvj5JaJsC3j-HbvTQ",   heading:109.02, pitch:-29.07, photo:"himonora/photo_54.jpg", card:"himonora/card_54.jpg"},
   {no:56, name:"やまがた園・あおき屋",    lat:35.1256255, lng:138.8393115, panoId:"6naaf1tbMLyOWQIbly-k7w",    heading:308.7,  pitch:-5.56,  photo:"himonora/photo_56.jpg", card:"himonora/card_56.jpg"},
 ];
-let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true;
+let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true, himPrize=0;
 const POINTS_PER_ROUND = 5000;
 const TANKA = [
   "千本の 松の梢に 風わたり\n沼津の海の 青を知るかな",
@@ -1350,6 +1350,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     if(m<=20){prize=500000;captureLabel="生け捕り！";}
     else if(m<=50){prize=5000;captureLabel="遺体回収";}
     else if(m<=100){prize=500;captureLabel="写真撮影";}
+    himPrize=prize;
     total+=prize;
     himonoraAlive=(prize>0);
     const _rSeal=document.getElementById("resultSeal");
@@ -1453,8 +1454,8 @@ function submitGuess(fromTimer=false, noAnswer=false){
   // ヒモノラ成功時はカードフリップ→結果、その他は宝100選フォト→結果
   if(difficulty==="himonora" && himonoraAlive){
     let _sText="捕獲", _sColor="rgba(220,30,30,0.92)";
-    if(prize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
-    else if(prize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
+    if(himPrize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
+    else if(himPrize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
     showHimonoraCardThen(()=>{
       document.getElementById("resultOverlay").classList.add("show");
     }, _sText, _sColor);
