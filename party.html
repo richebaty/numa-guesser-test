@@ -1395,7 +1395,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     total+=pts;
   }
   document.getElementById("totalScore").textContent=total.toLocaleString();
-  if(isVersus) document.getElementById("oppbarMe").textContent=total.toLocaleString();
+  if(isVersus) document.getElementById("oppbarMe").textContent=difficulty==="himonora"?"¥"+total.toLocaleString():total.toLocaleString();
   if(difficulty!=="himonora") document.getElementById("ptsVal").textContent=pts;
   const rm=new google.maps.Map(document.getElementById("resultMap"),{center:target.latLng,zoom:13,disableDefaultUI:true,gestureHandling:"none"});
   if(guessLatLng){
@@ -1444,7 +1444,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     });
   }
   document.getElementById("nextBtn").textContent = difficulty==="himonora"
-    ? (himonoraAlive ? "次の獲物へ →" : (isVersus ? "待機する →" : "結果を見る →"))
+    ? (himonoraAlive ? "次の獲物へ →" : "結果を見る →")
     : (round>=MAX_ROUNDS ? "結果を見る →" : "次の問題へ →");
 
   if(!isVersus){
@@ -1567,23 +1567,7 @@ function next(){
     const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.innerHTML='<ruby>獲得点<rt>かくとくてん</rt></ruby>';
   }
   if(difficulty==="himonora"){
-    if(isVersus){
-      // 対戦ヒモノラ：全員が回答するまで待つ。全員失敗なら終了、誰か捕獲なら続行
-      roomRef.child("players/"+myId).update({ ready:true, round:round });
-      waitForEveryoneThen(()=>{
-        // この round で himCapture:true の人が1人でもいれば続行
-        const anyCapture = Object.values(playersCache).some(p => p && p.himCapture===true);
-        if(!anyCapture){
-          roomRef.child("players/"+myId).update({ finished:true, himCapture:false, ready:false });
-          showFinal();
-        } else {
-          // 次ラウンドのためにリセット
-          roomRef.child("players/"+myId).update({ himCapture:false, ready:false });
-          startRound();
-        }
-      });
-      return;
-    }
+    // 対戦でも各自ペース（同期なし）。捕獲できなかった人はそこで終了。
     if(!himonoraAlive) showFinal(); else startRound();
     return;
   }
@@ -1697,13 +1681,13 @@ function showFinal(){
     document.getElementById("finalVsRow").style.display="none";
     const _fh2=document.getElementById("finalOverlay").querySelector("h2"); if(_fh2) _fh2.textContent="ヒモノラ捜索 結果";
     if(isVersus){
-      // 対戦ヒモノラ：順位表を表示
+      // 対戦ヒモノラ：捕獲数・賞金をFirebaseに書き込み、振り返りボードを表示
+      roomRef.child("players/"+myId).update({ finished:true, total:total, himCaptureCount:successRounds });
       document.getElementById("finalVerdict").style.display="block";
       document.getElementById("finalBoard").style.display="none";
       document.getElementById("restartBtn").style.display="none";
       const _rb=document.getElementById("reviewBtn"); if(_rb) _rb.style.display="none";
       finalShowing=true;
-      if(isHost){ roomRef.child("players/"+myId).update({finished:true}); }
       renderFinalBoard();
     } else {
       document.getElementById("finalVerdict").style.display="none";
@@ -1750,24 +1734,43 @@ function renderFinalBoard(){
 
   const myRank=arr.findIndex(p=>p.id===myId)+1;
   const verdict=document.getElementById("finalVerdict");
-  if(everyoneDone){
-    if(myRank===1){ verdict.textContent="優勝！ 🎉 今日の沼津王"; verdict.className="final-verdict win"; }
-    else if(myRank<=3){ verdict.textContent=myRank+"位！ あっぱれ"; verdict.className="final-verdict draw"; }
-    else { verdict.textContent=myRank+"位 / "+arr.length+"人"; verdict.className="final-verdict lose"; }
+  if(difficulty==="himonora"){
+    // ヒモノラ対戦：全員の結果が揃ったら順位を出す
+    const myCaptures = (playersCache[myId]||{}).himCaptureCount||0;
+    if(everyoneDone){
+      if(myRank===1){ verdict.textContent="最多捕獲！🎉 ヒモノラ研究所の英雄"; verdict.className="final-verdict win"; }
+      else { verdict.textContent=`捕獲${myCaptures}匹・${myRank}位 / ${arr.length}人`; verdict.className="final-verdict draw"; }
+    } else {
+      verdict.textContent=`捕獲${myCaptures}匹・暫定${myRank}位（${finishedCount}/${all.length}人 終了）`;
+      verdict.className="final-verdict draw";
+    }
   } else {
-    verdict.textContent="いまの順位："+myRank+"位 / "+arr.length+"人";
-    verdict.className="final-verdict draw";
+    if(everyoneDone){
+      if(myRank===1){ verdict.textContent="優勝！ 🎉 今日の沼津王"; verdict.className="final-verdict win"; }
+      else if(myRank<=3){ verdict.textContent=myRank+"位！ あっぱれ"; verdict.className="final-verdict draw"; }
+      else { verdict.textContent=myRank+"位 / "+arr.length+"人"; verdict.className="final-verdict lose"; }
+    } else {
+      verdict.textContent="いまの順位："+myRank+"位 / "+arr.length+"人";
+      verdict.className="final-verdict draw";
+    }
   }
   const board=document.getElementById("finalBoard");
   board.style.display="block";
-  const title = everyoneDone ? "最終順位" : `順位（${finishedCount}/${all.length}人 終了）`;
-  const fmtScore=v=>difficulty==="himonora"?"¥"+v.toLocaleString()+"円":v.toLocaleString()+"点";
+  const title = everyoneDone ? "最終結果" : `結果（${finishedCount}/${all.length}人 終了）`;
   board.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${title}</div>` +
     arr.map((p,i)=>{
       const mine = p.id===myId ? ' style="color:var(--coral);font-weight:bold;"' : '';
       const medal = everyoneDone ? (i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)+".") : ((i+1)+".");
       const playing = (p.finished===true) ? "" : ` <span style="color:var(--sea);font-size:13px;">…プレイ中</span>`;
-      return `<div${mine}>${medal} ${escapeHtml(p.name)} … ${fmtScore(p.total||0)}${playing}</div>`;
+      let scoreStr;
+      if(difficulty==="himonora"){
+        const cap = p.himCaptureCount!=null ? p.himCaptureCount+"匹" : "—";
+        const prize = "¥"+(p.total||0).toLocaleString()+"円";
+        scoreStr = `${cap} / ${prize}`;
+      } else {
+        scoreStr = (p.total||0).toLocaleString()+"点";
+      }
+      return `<div${mine}>${medal} ${escapeHtml(p.name)} … ${scoreStr}${playing}</div>`;
     }).join("");
 }
 // 一人用：その端末の自己ベストを記録・表示（保存できない環境では静かに非表示）
