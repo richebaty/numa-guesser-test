@@ -1350,10 +1350,8 @@ function submitGuess(fromTimer=false, noAnswer=false){
       const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="きょり";
       const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
     } else {
-      // 失敗時：捕獲数と累計賞金を表示
-      const capturesSoFar=round-1;
-      document.getElementById("distVal").textContent=capturesSoFar+"匹";
-      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="捕獲数";
+      // 失敗時：距離をそのまま表示、ラベルをヒモノラとの距離に変更
+      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="ヒモノラ遭遇まで";
       const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
       document.getElementById("ptsVal").textContent="¥"+total.toLocaleString()+"円";
       const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
@@ -1635,7 +1633,7 @@ function rankRuby(pct){
 function showFinal(){
   if(difficulty==="himonora"){
     const successRounds=himonoraAlive?round:round-1;
-    document.getElementById("finalScore").textContent="¥"+total.toLocaleString();
+    document.getElementById("finalScore").textContent="¥"+total.toLocaleString()+"円";
     document.getElementById("finalRank").textContent=successRounds+"匹";
     const sl=document.getElementById("finalScoreLabel"); if(sl) sl.textContent="獲得賞金";
     const rl=document.getElementById("finalRankLabel"); if(rl) rl.innerHTML="捕獲数";
@@ -1721,11 +1719,11 @@ function showBestScore(){
   const best=Math.max(prev,total);
   if(isNew){
     bestRow.className="best-row newbest";
-    const _fmt=difficulty==="himonora"?"¥"+total.toLocaleString():total.toLocaleString()+"点";
+    const _fmt=difficulty==="himonora"?"¥"+total.toLocaleString()+"円":total.toLocaleString()+"点";
     bestText.innerHTML=modeLabel+"モード 自己ベスト更新！ "+_fmt+" <span class=\"badge\">NEW</span>";
   } else {
     bestRow.className="best-row";
-    const _fmtB=difficulty==="himonora"?"¥"+best.toLocaleString():best.toLocaleString()+"点";
+    const _fmtB=difficulty==="himonora"?"¥"+best.toLocaleString()+"円":best.toLocaleString()+"点";
     bestText.textContent=modeLabel+"モード 自己ベスト "+_fmtB;
   }
   bestRow.style.display="block";
