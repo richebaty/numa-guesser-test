@@ -647,21 +647,17 @@
   .ncg-btns{ display:flex; gap:12px; margin-top:16px; justify-content:center; }
   .ncg-btn{ padding:10px 24px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
   .ncg-btn-next{ background:#ee7a52; color:#fff; border:none; }
-  /* ライトボックス（3Dカードフリップ：写真→カード面→写真→閉じる） */
-  #colLightbox{ position:fixed; inset:0; z-index:400; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0); transition:background 0.3s ease; pointer-events:none; }
-  #colLightbox.show{ display:flex; pointer-events:auto; }
-  #colLightbox.lb-active{ background:rgba(0,0,0,0.92); }
-  #colLightboxClose{ position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.8); font-size:26px; cursor:pointer; z-index:401; line-height:1; }
-  #colLbCard{ width:min(85vw, min(350px, calc(78vh * 240 / 336))); aspect-ratio:240/336; perspective:900px; cursor:pointer; transform:scale(0) rotate(-8deg); transition:transform 0.42s cubic-bezier(0.34,1.56,0.64,1); }
-  #colLbCard.lb-open{ transform:scale(1) rotate(0deg); }
-  #colLbCard.lb-closing{ transform:scale(0) rotate(8deg); transition:transform 0.25s ease-in; }
-  #colLbCardInner{ width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.55s ease; border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.85); }
-  #colLbCardInner.lb-flipped{ transform:rotateY(180deg); }
-  .col-lb-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; overflow:hidden; }
-  .col-lb-back{ transform:rotateY(180deg); }
+  /* ライトボックス（JS動的生成 z-index:9000） */
+  .col-lb-overlay{ position:fixed; inset:0; z-index:9000; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); }
+  .col-lb-close-btn{ position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.8); font-size:28px; cursor:pointer; line-height:1; }
+  .col-lb-card{ width:min(85vw, min(350px, calc(78vh * 240 / 336))); aspect-ratio:240/336; perspective:900px; cursor:pointer; }
+  .col-lb-inner{ width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.55s ease; border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.85); }
+  .col-lb-inner.flipped{ transform:rotateY(180deg); }
+  .col-lb-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; overflow:hidden; background:#1e2c3c; }
+  .col-lb-face.back{ transform:rotateY(180deg); }
   .col-lb-face img{ width:100%; height:100%; object-fit:cover; display:block; }
-  #colLightboxHint{ margin-top:14px; font-size:12px; color:rgba(255,255,255,0.55); pointer-events:none; opacity:0; transition:opacity 0.3s; }
-  #colLightbox.lb-active #colLightboxHint{ opacity:1; }
+  .col-lb-hint{ margin-top:14px; font-size:12px; color:rgba(255,255,255,0.55); text-align:center; }
+  .col-lb-no-img{ display:flex; align-items:center; justify-content:center; height:100%; font-size:13px; color:rgba(255,255,255,0.4); padding:20px; text-align:center; }
   .col-btn{
     background:none; border:1.5px solid #8b0000; color:#8b0000;
     border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
@@ -753,20 +749,7 @@
     </div>
   </div>
 
-  <!-- 図鑑カードのライトボックス（3Dフリップ：写真→カード面→写真→閉じる） -->
-  <div id="colLightbox">
-    <button id="colLightboxClose">✕</button>
-    <div id="colLbCard">
-      <div id="colLbCardInner">
-        <div class="col-lb-face col-lb-front"><img id="colLbFrontImg" alt=""></div>
-        <div class="col-lb-face col-lb-back">
-          <img id="colLbBackImg" alt="">
-          <div id="colLbBackPlaceholder" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:13px;color:rgba(255,255,255,0.4);padding:20px;text-align:center;background:#1e2c3c;border-radius:14px;">カード画像<br>準備中</div>
-        </div>
-      </div>
-    </div>
-    <div id="colLightboxHint"></div>
-  </div>
+  <!-- colLightboxは JS で動的生成 -->
 
   <!-- ヒモノラ コレクション図鑑 -->
   <div id="collectionOverlay">
@@ -2358,71 +2341,83 @@ function hideNewCardOverlay(){
 }
 document.getElementById("newCardNextBtn").onclick=hideNewCardOverlay;
 // ライトボックス：3Dフリップ（写真→カード面→写真→シュッと閉じる）
-let _colLbStep=0, _colLbAnchor=null;
+// ライトボックス：動的生成（z-index:9000 で確実に最前面）
+let _colLbStep=0, _colLbEl=null;
 function openColLightbox(anchor){
-  _colLbAnchor=anchor; _colLbStep=1;
-  const frontImg=document.getElementById("colLbFrontImg");
-  const backImg=document.getElementById("colLbBackImg");
-  const backPh=document.getElementById("colLbBackPlaceholder");
-  // プレースホルダーリセット
-  backImg.style.display="";
-  if(backPh) backPh.style.display="none";
-  // onerrorをここで設定（src=""のタイミングでは発火しないよう）
-  backImg.onerror=function(){
+  // 既存を削除
+  if(_colLbEl){ _colLbEl.remove(); _colLbEl=null; }
+  _colLbStep=1;
+
+  // オーバーレイ生成
+  const overlay=document.createElement("div");
+  overlay.className="col-lb-overlay";
+
+  // 閉じるボタン
+  const closeBtn=document.createElement("button");
+  closeBtn.className="col-lb-close-btn";
+  closeBtn.textContent="✕";
+  closeBtn.onclick=(e)=>{ e.stopPropagation(); overlay.remove(); _colLbEl=null; _colLbStep=0; };
+  overlay.appendChild(closeBtn);
+
+  // カード
+  const card=document.createElement("div");
+  card.className="col-lb-card";
+  const inner=document.createElement("div");
+  inner.className="col-lb-inner";
+
+  // 表面（写真）
+  const front=document.createElement("div");
+  front.className="col-lb-face";
+  const fImg=document.createElement("img");
+  fImg.src=anchor.photo; fImg.alt=anchor.name;
+  front.appendChild(fImg);
+
+  // 裏面（カード）
+  const back=document.createElement("div");
+  back.className="col-lb-face back";
+  const bImg=document.createElement("img");
+  bImg.alt=anchor.name;
+  bImg.onerror=function(){
     this.style.display="none";
-    if(backPh){ backPh.style.display="flex"; }
+    const ph=document.createElement("div");
+    ph.className="col-lb-no-img";
+    ph.textContent="カード画像 準備中";
+    back.appendChild(ph);
     this.onerror=null;
   };
-  frontImg.src=anchor.photo;
-  backImg.src=anchor.card;
-  document.getElementById("colLightboxHint").textContent="タップでカード面を見る";
-  const lb=document.getElementById("colLightbox");
-  const card=document.getElementById("colLbCard");
-  const inner=document.getElementById("colLbCardInner");
-  inner.classList.remove("lb-flipped");
-  card.classList.remove("lb-open","lb-closing");
-  lb.classList.remove("lb-active");
-  lb.classList.add("show");
-  // 次フレームでアニメ開始（scaleとbgをトリガー）
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    lb.classList.add("lb-active");
-    card.classList.add("lb-open");
-  }));
+  bImg.src=anchor.card;
+  back.appendChild(bImg);
+
+  inner.appendChild(front);
+  inner.appendChild(back);
+  card.appendChild(inner);
+
+  // ヒント
+  const hint=document.createElement("div");
+  hint.className="col-lb-hint";
+  hint.textContent="タップでカード面を見る";
+
+  // カードクリック
+  card.onclick=(e)=>{
+    e.stopPropagation();
+    if(_colLbStep===1){
+      _colLbStep=2;
+      inner.classList.add("flipped");
+      hint.textContent="タップで表面へ";
+    } else if(_colLbStep===2){
+      _colLbStep=3;
+      inner.classList.remove("flipped");
+      hint.textContent="タップで閉じる";
+    } else {
+      overlay.remove(); _colLbEl=null; _colLbStep=0;
+    }
+  };
+
+  overlay.appendChild(card);
+  overlay.appendChild(hint);
+  document.body.appendChild(overlay);
+  _colLbEl=overlay;
 }
-function closeColLightbox(){
-  _colLbStep=0;
-  const lb=document.getElementById("colLightbox");
-  const card=document.getElementById("colLbCard");
-  card.classList.remove("lb-open");
-  card.classList.add("lb-closing");
-  lb.classList.remove("lb-active");
-  setTimeout(()=>{
-    lb.classList.remove("show");
-    card.classList.remove("lb-closing");
-    document.getElementById("colLbCardInner").classList.remove("lb-flipped");
-    _colLbAnchor=null;
-  }, 280);
-}
-document.getElementById("colLbCard").onclick=(e)=>{
-  e.stopPropagation();
-  if(_colLbStep===1){
-    // 写真面 → カード面（半回転）
-    _colLbStep=2;
-    document.getElementById("colLbCardInner").classList.add("lb-flipped");
-    document.getElementById("colLightboxHint").textContent="タップで表面へ";
-  } else if(_colLbStep===2){
-    // カード面 → 写真面（逆回転）
-    _colLbStep=3;
-    document.getElementById("colLbCardInner").classList.remove("lb-flipped");
-    document.getElementById("colLightboxHint").textContent="タップで閉じる";
-  } else if(_colLbStep===3){
-    // 写真面 → シュッと閉じる
-    closeColLightbox();
-  }
-};
-document.getElementById("colLightboxClose").onclick=(e)=>{
-  e.stopPropagation(); closeColLightbox();
-};
 // 終了画面の図鑑ボタン
 document.getElementById("finalColBtn").onclick=showCollection;
 
