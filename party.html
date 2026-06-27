@@ -755,7 +755,7 @@
   <div id="collectionOverlay">
     <div class="col-header">
       <div>
-        <h2>ヒモノラ図鑑</h2>
+        <h2>ヒモノラカードコレクション</h2>
         <div class="col-count" id="colCount">0 / 15</div>
       </div>
       <button class="col-close" id="colCloseBtn">✕</button>
@@ -832,7 +832,7 @@
       <div class="tanka" id="finalTanka"></div>
       <button class="btn btn-guess" id="reviewBtn" style="display:none; margin-bottom:10px;">ふりかえりを見る 🗺️</button>
       <button class="btn btn-guess" id="restartBtn">もう一回 ↺</button>
-      <button class="btn btn-ghost" id="finalColBtn" style="display:none; margin-top:10px;">コレクション図鑑を見る</button>
+      <button class="btn btn-ghost" id="finalColBtn" style="display:none; margin-top:10px;">カードコレクションを見る</button>
       <button class="btn btn-ghost" id="homeBtn" style="margin-top:10px;">ホームへ ⌂</button>
     </div>
   </div>
@@ -910,7 +910,7 @@
           <button class="diff-btn" id="diffHimonora">ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
-        <button class="col-btn" id="colBtn">コレクション図鑑を見る</button>
+        <button class="col-btn" id="colBtn">カードコレクションを見る</button>
       </div>
 
       <!-- 主催者：待合室を作る -->
@@ -1469,9 +1469,10 @@ function submitGuess(fromTimer=false, noAnswer=false){
       else img.style.display="none";
       document.getElementById("himonoraFailMsg").style.display=prize>0?"none":"block";
     }
-    // 失敗時は答えの場所を隠す（次回に覚えられないよう）
-    document.getElementById("resultMap").style.display=prize>0?"":"none";
-    document.getElementById("placeName").style.display=prize>0?"":"none";
+    // 生け捕り以外（遺体回収・写真撮影・失敗）は場所を隠す（次回も楽しめるよう）
+    const _showMap=(prize===500000);
+    document.getElementById("resultMap").style.display=_showMap?"":"none";
+    document.getElementById("placeName").style.display=_showMap?"":"none";
   } else {
     total+=pts;
   }
@@ -2311,7 +2312,7 @@ document.getElementById("colBtn").onclick=showCollection;
     _tapTimer=setTimeout(()=>{ _tapCount=0; }, 1200);
     if(_tapCount>=7){
       _tapCount=0;
-      if(confirm("コレクション図鑑をリセットしますか？\n（取得したカードがすべて消えます）")){
+      if(confirm("カードコレクションをリセットしますか？\n（取得したカードがすべて消えます）")){
         localStorage.removeItem("numaGuesserHimonoraCollection");
         alert("コレクションをリセットしました。");
       }
