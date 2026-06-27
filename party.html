@@ -758,8 +758,11 @@
     <button id="colLightboxClose">✕</button>
     <div id="colLbCard">
       <div id="colLbCardInner">
-        <div class="col-lb-face col-lb-front"><img id="colLbFrontImg" src="" alt="" onerror="this.src='';this.style.display='none';this.parentElement.style.background='#1e2c3c';"></div>
-        <div class="col-lb-face col-lb-back"><img id="colLbBackImg" src="" alt="" onerror="this.src='';this.style.display='none';this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;color:rgba(255,255,255,0.4);padding:20px;text-align:center;\'>カード画像<br>準備中</div>';"></div>
+        <div class="col-lb-face col-lb-front"><img id="colLbFrontImg" alt=""></div>
+        <div class="col-lb-face col-lb-back">
+          <img id="colLbBackImg" alt="">
+          <div id="colLbBackPlaceholder" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:13px;color:rgba(255,255,255,0.4);padding:20px;text-align:center;background:#1e2c3c;border-radius:14px;">カード画像<br>準備中</div>
+        </div>
       </div>
     </div>
     <div id="colLightboxHint"></div>
@@ -2358,8 +2361,20 @@ document.getElementById("newCardNextBtn").onclick=hideNewCardOverlay;
 let _colLbStep=0, _colLbAnchor=null;
 function openColLightbox(anchor){
   _colLbAnchor=anchor; _colLbStep=1;
-  document.getElementById("colLbFrontImg").src=anchor.photo;
-  document.getElementById("colLbBackImg").src=anchor.card;
+  const frontImg=document.getElementById("colLbFrontImg");
+  const backImg=document.getElementById("colLbBackImg");
+  const backPh=document.getElementById("colLbBackPlaceholder");
+  // プレースホルダーリセット
+  backImg.style.display="";
+  if(backPh) backPh.style.display="none";
+  // onerrorをここで設定（src=""のタイミングでは発火しないよう）
+  backImg.onerror=function(){
+    this.style.display="none";
+    if(backPh){ backPh.style.display="flex"; }
+    this.onerror=null;
+  };
+  frontImg.src=anchor.photo;
+  backImg.src=anchor.card;
   document.getElementById("colLightboxHint").textContent="タップでカード面を見る";
   const lb=document.getElementById("colLightbox");
   const card=document.getElementById("colLbCard");
