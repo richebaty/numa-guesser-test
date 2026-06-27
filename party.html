@@ -650,14 +650,30 @@
   /* ライトボックス（JS動的生成 z-index:9000） */
   .col-lb-overlay{ position:fixed; inset:0; z-index:9000; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); }
   .col-lb-close-btn{ position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.8); font-size:28px; cursor:pointer; line-height:1; }
-  .col-lb-card{ width:min(85vw, min(350px, calc(78vh * 240 / 336))); aspect-ratio:240/336; perspective:900px; cursor:pointer; }
-  .col-lb-inner{ width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.55s ease; border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.85); }
+  /* pop-in はラッパーで行い、flip コンテナ（perspective）と分離 */
+  @keyframes colLbIn{ 0%{transform:scale(0.2) rotate(-12deg);opacity:0} 70%{transform:scale(1.06) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+  .col-lb-wrap{ width:min(85vw, min(350px, calc(78vh * 240 / 336))); aspect-ratio:240/336; cursor:pointer; animation:colLbIn 0.44s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .col-lb-card{ width:100%; height:100%; perspective:900px; }
+  .col-lb-inner{ width:100%; height:100%; -webkit-transform-style:preserve-3d; transform-style:preserve-3d; transition:transform 0.55s ease; border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.85); }
   .col-lb-inner.flipped{ transform:rotateY(180deg); }
-  .col-lb-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; overflow:hidden; background:#1e2c3c; }
-  .col-lb-face.back{ transform:rotateY(180deg); }
+  .col-lb-face{ position:absolute; inset:0; -webkit-backface-visibility:hidden; backface-visibility:hidden; border-radius:14px; overflow:hidden; background:#1e2c3c; }
+  .col-lb-face.back{ -webkit-transform:rotateY(180deg); transform:rotateY(180deg); }
   .col-lb-face img{ width:100%; height:100%; object-fit:cover; display:block; }
   .col-lb-hint{ margin-top:14px; font-size:12px; color:rgba(255,255,255,0.55); text-align:center; }
   .col-lb-no-img{ display:flex; align-items:center; justify-content:center; height:100%; font-size:13px; color:rgba(255,255,255,0.4); padding:20px; text-align:center; }
+  /* ===== コンプリート演出 ===== */
+  @keyframes starPop{ 0%{transform:scale(0) rotate(0deg);opacity:0} 60%{transform:scale(1.3) rotate(20deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+  @keyframes shimmer{ 0%,100%{opacity:0.6} 50%{opacity:1} }
+  @keyframes floatUp{ 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-60px) scale(0.5);opacity:0} }
+  #completeOverlay{ position:fixed; inset:0; z-index:8000; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(10,16,28,0.97); text-align:center; padding:24px; overflow:hidden; }
+  #completeOverlay.show{ display:flex; }
+  .cmp-stars{ font-size:36px; letter-spacing:6px; animation:starPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both; margin-bottom:10px; }
+  .cmp-title{ font-size:28px; font-weight:700; color:#e0b94a; letter-spacing:0.12em; animation:shimmer 2s ease infinite; margin-bottom:6px; }
+  .cmp-sub{ font-size:15px; color:#fbf7ef; margin-bottom:6px; }
+  .cmp-detail{ font-size:12px; color:rgba(251,247,239,0.55); margin-bottom:24px; }
+  .cmp-particles{ position:absolute; inset:0; pointer-events:none; }
+  .cmp-p{ position:absolute; font-size:18px; animation:floatUp 1.8s ease forwards; }
+  .cmp-btn{ background:#e0b94a; color:#1a2634; border:none; border-radius:12px; padding:12px 28px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 4px 16px rgba(224,185,74,0.4); }
   .col-btn{
     background:none; border:1.5px solid #8b0000; color:#8b0000;
     border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
@@ -750,6 +766,16 @@
   </div>
 
   <!-- colLightboxは JS で動的生成 -->
+
+  <!-- コンプリート演出 -->
+  <div id="completeOverlay">
+    <div class="cmp-particles" id="cmpParticles"></div>
+    <div class="cmp-stars">⭐🎉⭐</div>
+    <div class="cmp-title">COMPLETE !</div>
+    <div class="cmp-sub">全15枚のヒモノラカードを<br>コレクション完成！</div>
+    <div class="cmp-detail">ヒモノラ研究所より感謝状を授与します</div>
+    <button class="cmp-btn" id="completeDoneBtn">カードコレクションを見る</button>
+  </div>
 
   <!-- ヒモノラ コレクション図鑑 -->
   <div id="collectionOverlay">
@@ -1250,7 +1276,7 @@ function composeRoundAnchors(){
 function buildRoundOrder(seed){
   if(difficulty==="himonora"){
     himonoraOrder=shuffle(HIMONORA_ANCHORS.slice());
-    himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[];
+    himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[]; himCompletedThisGame=false;
     return;
   }
   if(seed && seed.length){
@@ -1450,7 +1476,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     if(prize>0){
       document.getElementById("ptsVal").textContent="¥"+prize.toLocaleString()+"円";
       const _pl=document.getElementById("ptsLabel"); if(_pl) _pl.textContent="獲得賞金";
-      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent="きょり";
+      const _dl=document.getElementById("distLabel"); if(_dl) _dl.textContent=prize===500000?"きょり":"ヒモノラ遭遇まで";
       const _ds=document.getElementById("distVal"); if(_ds) _ds.closest(".stat").style.display="";
     } else {
       // 失敗時：距離をそのまま表示、ラベルをヒモノラとの距離に変更
@@ -1654,10 +1680,14 @@ function next(){
     // 対戦でも各自ペース（同期なし）。捕獲できなかった人はそこで終了。
     if(!himonoraAlive){
       // ゲームオーバー：今回ゲットした新カードがあれば一括表示
+      const _afterNew=()=>{
+        if(himCompletedThisGame){ himCompletedThisGame=false; showCompleteOverlay(()=>showFinal()); }
+        else showFinal();
+      };
       if(himNewCardsThisGame.length>0){
-        showNewCardsGetOverlay(himNewCardsThisGame, ()=>showFinal());
+        showNewCardsGetOverlay(himNewCardsThisGame, _afterNew);
       } else {
-        showFinal();
+        _afterNew();
       }
     } else {
       startRound();
@@ -1979,7 +2009,7 @@ function closeReview(){
 }
 function restart(){
   myReview=[]; total=0; round=0;
-  himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[];
+  himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[]; himCompletedThisGame=false;
   const _fcb3=document.getElementById("finalColBtn"); if(_fcb3) _fcb3.style.display="none";
   buildRoundOrder();
   document.getElementById("totalScore").textContent="0";
@@ -2269,16 +2299,39 @@ document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 // ===== ヒモノラ コレクション =====
 const _COL_KEY="numaGuesserHimonoraCollection";
 function getCollection(){ try{ return JSON.parse(localStorage.getItem(_COL_KEY)||"[]"); }catch(e){ return []; } }
+let himCompletedThisGame=false;
 function saveHimonoraCard(no){
   if(!no) return;
   const c=getCollection();
   if(!c.includes(no)){
     c.push(no);
     localStorage.setItem(_COL_KEY,JSON.stringify(c));
-    // このゲームで初めてゲットしたカードとして記録
     const anchor=HIMONORA_ANCHORS.find(a=>a.no===no);
     if(anchor) himNewCardsThisGame.push(anchor);
+    // 全枚数コンプリートチェック
+    if(c.length>=HIMONORA_ANCHORS.length) himCompletedThisGame=true;
   }
+}
+function showCompleteOverlay(done){
+  // パーティクル生成
+  const pEl=document.getElementById("cmpParticles");
+  pEl.innerHTML="";
+  const emojis=["⭐","🌟","✨","🎊","🎉","💫","🏅"];
+  for(let i=0;i<24;i++){
+    const p=document.createElement("div");
+    p.className="cmp-p";
+    p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    p.style.left=Math.random()*100+"vw";
+    p.style.top=(40+Math.random()*50)+"vh";
+    p.style.animationDelay=(Math.random()*1.2)+"s";
+    p.style.fontSize=(14+Math.random()*18)+"px";
+    pEl.appendChild(p);
+  }
+  document.getElementById("completeOverlay").classList.add("show");
+  document.getElementById("completeDoneBtn").onclick=()=>{
+    document.getElementById("completeOverlay").classList.remove("show");
+    if(done) done();
+  };
 }
 function showCollection(){
   const got=getCollection();
@@ -2360,7 +2413,9 @@ function openColLightbox(anchor){
   closeBtn.onclick=(e)=>{ e.stopPropagation(); overlay.remove(); _colLbEl=null; _colLbStep=0; };
   overlay.appendChild(closeBtn);
 
-  // カード
+  // カード（wrap=pop-in animation / card=perspective container / inner=flip）
+  const wrap=document.createElement("div");
+  wrap.className="col-lb-wrap";
   const card=document.createElement("div");
   card.className="col-lb-card";
   const inner=document.createElement("div");
@@ -2392,14 +2447,15 @@ function openColLightbox(anchor){
   inner.appendChild(front);
   inner.appendChild(back);
   card.appendChild(inner);
+  wrap.appendChild(card);
 
   // ヒント
   const hint=document.createElement("div");
   hint.className="col-lb-hint";
   hint.textContent="タップでカード面を見る";
 
-  // カードクリック
-  card.onclick=(e)=>{
+  // カードクリック（wrapに設定）
+  wrap.onclick=(e)=>{
     e.stopPropagation();
     if(_colLbStep===1){
       _colLbStep=2;
@@ -2414,7 +2470,7 @@ function openColLightbox(anchor){
     }
   };
 
-  overlay.appendChild(card);
+  overlay.appendChild(wrap);
   overlay.appendChild(hint);
   document.body.appendChild(overlay);
   _colLbEl=overlay;
