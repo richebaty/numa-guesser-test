@@ -624,17 +624,13 @@
   .col-header h2{ font-size:20px; font-weight:700; color:#fbf7ef; margin-bottom:2px; }
   .col-count{ font-size:13px; color:rgba(251,247,239,0.55); }
   .col-close{ background:none; border:none; color:rgba(251,247,239,0.55); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
-  .col-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; width:100%; max-width:420px; }
-  .col-card{ border-radius:12px; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); cursor:pointer; perspective:800px; }
+  .col-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; max-width:420px; }
+  .col-card{ border-radius:10px; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); cursor:pointer; overflow:hidden; }
   .col-card.got{ border-color:#e0b94a; }
-  .col-card-inner{ position:absolute; inset:0; transform-style:preserve-3d; transition:transform 0.5s ease; border-radius:10px; }
-  .col-card.flipped .col-card-inner{ transform:rotateY(180deg); }
-  .col-card-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:10px; overflow:hidden; }
-  .col-card-back-face{ transform:rotateY(180deg); }
   .col-card img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .col-card .col-no{ position:absolute; top:4px; left:7px; font-size:10px; color:rgba(255,255,255,0.65); font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
-  .col-card .col-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); font-size:9px; color:#fff; padding:3px 5px; text-align:center; }
-  .col-card .col-lock{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:36px; color:rgba(255,255,255,0.12); }
+  .col-card .col-no{ position:absolute; top:3px; left:5px; font-size:9px; color:rgba(255,255,255,0.65); font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
+  .col-card .col-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); font-size:8px; color:#fff; padding:2px 4px; text-align:center; }
+  .col-card .col-lock{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; color:rgba(255,255,255,0.12); }
   /* ===== NEW カードゲット画面 ===== */
   #newCardOverlay{
     position:fixed; inset:0; z-index:290; display:none;
@@ -648,15 +644,15 @@
   .ncg-card-item{ width:min(38vw,140px); flex-shrink:0; }
   .ncg-card-item img{ width:100%; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.6); display:block; }
   .ncg-card-name{ font-size:11px; color:rgba(251,247,239,0.7); text-align:center; margin-top:4px; }
-  .ncg-btns{ display:flex; gap:12px; margin-top:16px; }
-  .ncg-btn{ padding:10px 20px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
-  .ncg-btn-col{ background:none; color:#fbf7ef; border:1.5px solid rgba(251,247,239,0.4); }
+  .ncg-btns{ display:flex; gap:12px; margin-top:16px; justify-content:center; }
+  .ncg-btn{ padding:10px 24px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
   .ncg-btn-next{ background:#ee7a52; color:#fff; border:none; }
-  /* ライトボックス */
-  #colLightbox{ position:fixed; inset:0; z-index:400; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); }
+  /* ライトボックス（写真→カード面→閉じる 3ステップ） */
+  #colLightbox{ position:fixed; inset:0; z-index:400; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); }
   #colLightbox.show{ display:flex; }
   #colLightboxClose{ position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.8); font-size:26px; cursor:pointer; z-index:401; line-height:1; }
-  #colLightboxImg{ max-width:88vw; max-height:88vh; border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,0.8); }
+  #colLightboxImg{ max-width:88vw; max-height:80vh; border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,0.8); display:block; }
+  #colLightboxHint{ margin-top:12px; font-size:12px; color:rgba(255,255,255,0.5); pointer-events:none; }
   .col-btn{
     background:none; border:1.5px solid #8b0000; color:#8b0000;
     border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
@@ -744,15 +740,15 @@
     <div class="ncg-subtitle" id="ncgSubtitle"></div>
     <div id="newCardList"></div>
     <div class="ncg-btns">
-      <button class="ncg-btn ncg-btn-col" id="newCardColBtn">図鑑を見る</button>
       <button class="ncg-btn ncg-btn-next" id="newCardNextBtn">結果を見る</button>
     </div>
   </div>
 
-  <!-- 図鑑カードのライトボックス（全画面拡大） -->
+  <!-- 図鑑カードのライトボックス（写真面→カード面→閉じる） -->
   <div id="colLightbox">
     <button id="colLightboxClose">✕</button>
     <img id="colLightboxImg" src="" alt="">
+    <div id="colLightboxHint"></div>
   </div>
 
   <!-- ヒモノラ コレクション図鑑 -->
@@ -836,6 +832,7 @@
       <div class="tanka" id="finalTanka"></div>
       <button class="btn btn-guess" id="reviewBtn" style="display:none; margin-bottom:10px;">ふりかえりを見る 🗺️</button>
       <button class="btn btn-guess" id="restartBtn">もう一回 ↺</button>
+      <button class="btn btn-ghost" id="finalColBtn" style="display:none; margin-top:10px;">コレクション図鑑を見る</button>
       <button class="btn btn-ghost" id="homeBtn" style="margin-top:10px;">ホームへ ⌂</button>
     </div>
   </div>
@@ -1775,6 +1772,8 @@ function showFinal(){
     if(_seal) _seal.textContent=successRounds===0?"逃":"祝";
     document.getElementById("finalVsRow").style.display="none";
     const _fh2=document.getElementById("finalOverlay").querySelector("h2"); if(_fh2) _fh2.textContent="ヒモノラ捜索 結果";
+    // 図鑑ボタンを表示
+    const _fcb=document.getElementById("finalColBtn"); if(_fcb) _fcb.style.display="";
     if(isVersus){
       // 対戦ヒモノラ：捕獲数・賞金をFirebaseに書き込み、振り返りボードを表示
       roomRef.child("players/"+myId).update({ finished:true, total:total, himCaptureCount:successRounds, alive:true });
@@ -1797,6 +1796,8 @@ function showFinal(){
     document.getElementById("finalOverlay").classList.add("show");
     return;
   }
+  // 通常モードでは図鑑ボタンを非表示
+  const _fcb2=document.getElementById("finalColBtn"); if(_fcb2) _fcb2.style.display="none";
   document.getElementById("finalScore").textContent=total.toLocaleString();
   const pct=total/(POINTS_PER_ROUND*MAX_ROUNDS);
   document.getElementById("finalRank").innerHTML = rankRuby(pct);
@@ -1977,7 +1978,8 @@ function closeReview(){
 }
 function restart(){
   myReview=[]; total=0; round=0;
-  himonoraRoundIdx=0; himonoraAlive=true;
+  himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[];
+  const _fcb3=document.getElementById("finalColBtn"); if(_fcb3) _fcb3.style.display="none";
   buildRoundOrder();
   document.getElementById("totalScore").textContent="0";
   document.getElementById("finalOverlay").classList.remove("show");
@@ -2286,23 +2288,11 @@ function showCollection(){
     const div=document.createElement("div");
     div.className="col-card"+(got.includes(a.no)?" got":"");
     if(got.includes(a.no)){
-      // 写真面（表）→ クリックでカード面（裏）に反転
-      div.innerHTML=`<div class="col-card-inner">`
-        +`<div class="col-card-face col-card-front-face"><img src="${a.photo}" alt="${a.name}" loading="lazy"><div class="col-name">${a.name}</div></div>`
-        +`<div class="col-card-face col-card-back-face"><img src="${a.card}" alt="${a.name}" loading="lazy"><div class="col-no">No.${a.no}</div></div>`
-        +`</div>`;
-      div.onclick=()=>{
-        if(div.classList.contains("flipped")){
-          // カード面を表示中 → ライトボックスで全画面拡大
-          document.getElementById("colLightboxImg").src=a.card;
-          document.getElementById("colLightbox").classList.add("show");
-        } else {
-          // 写真面を表示中 → カード面に反転
-          div.classList.add("flipped");
-        }
-      };
+      // 写真面のみ表示。タップでライトボックスへ（写真→カード→閉じる）
+      div.innerHTML=`<img src="${a.photo}" alt="${a.name}" loading="lazy"><div class="col-name">${a.name}</div>`;
+      div.onclick=()=>openColLightbox(a);
     } else {
-      div.innerHTML=`<div class="col-card-inner"><div class="col-card-face col-card-front-face"><div class="col-lock">?</div><div class="col-no">No.${a.no}</div></div></div>`;
+      div.innerHTML=`<div class="col-lock">?</div><div class="col-no">No.${a.no}</div>`;
     }
     grid.appendChild(div);
   });
@@ -2333,10 +2323,33 @@ function hideNewCardOverlay(){
   if(_newCardDone){ const f=_newCardDone; _newCardDone=null; f(); }
 }
 document.getElementById("newCardNextBtn").onclick=hideNewCardOverlay;
-document.getElementById("newCardColBtn").onclick=showCollection;
-// ライトボックス
-document.getElementById("colLightboxClose").onclick=(e)=>{ e.stopPropagation(); document.getElementById("colLightbox").classList.remove("show"); };
-document.getElementById("colLightbox").onclick=()=>document.getElementById("colLightbox").classList.remove("show");
+// ライトボックス：写真面→カード面→閉じる の3ステップ
+let _colLbStep=0, _colLbAnchor=null;
+function openColLightbox(anchor){
+  _colLbAnchor=anchor; _colLbStep=1;
+  document.getElementById("colLightboxImg").src=anchor.photo;
+  document.getElementById("colLightboxHint").textContent="タップでカード面を見る";
+  document.getElementById("colLightbox").classList.add("show");
+}
+document.getElementById("colLightboxClose").onclick=(e)=>{
+  e.stopPropagation();
+  _colLbStep=0; _colLbAnchor=null;
+  document.getElementById("colLightbox").classList.remove("show");
+};
+document.getElementById("colLightbox").onclick=()=>{
+  if(_colLbStep===1){
+    // 写真面 → カード面
+    _colLbStep=2;
+    document.getElementById("colLightboxImg").src=_colLbAnchor.card;
+    document.getElementById("colLightboxHint").textContent="タップで閉じる";
+  } else {
+    // カード面 → 閉じる
+    _colLbStep=0; _colLbAnchor=null;
+    document.getElementById("colLightbox").classList.remove("show");
+  }
+};
+// 終了画面の図鑑ボタン
+document.getElementById("finalColBtn").onclick=showCollection;
 
 // ===== 待合室の沼津ミニ情報スライド =====
 // イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
