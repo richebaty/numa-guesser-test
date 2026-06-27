@@ -625,12 +625,30 @@
   .col-count{ font-size:13px; color:rgba(251,247,239,0.55); }
   .col-close{ background:none; border:none; color:rgba(251,247,239,0.55); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
   .col-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; max-width:420px; }
-  .col-card{ border-radius:12px; overflow:hidden; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); }
+  .col-card{ border-radius:12px; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); cursor:pointer; perspective:800px; }
   .col-card.got{ border-color:#e0b94a; }
+  .col-card-inner{ position:absolute; inset:0; transform-style:preserve-3d; transition:transform 0.5s ease; border-radius:10px; }
+  .col-card.flipped .col-card-inner{ transform:rotateY(180deg); }
+  .col-card-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:10px; overflow:hidden; }
+  .col-card-back-face{ transform:rotateY(180deg); }
   .col-card img{ width:100%; height:100%; object-fit:cover; display:block; }
   .col-card .col-no{ position:absolute; top:4px; left:7px; font-size:10px; color:rgba(255,255,255,0.65); font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
   .col-card .col-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); font-size:9px; color:#fff; padding:3px 5px; text-align:center; }
   .col-card .col-lock{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:36px; color:rgba(255,255,255,0.12); }
+  /* ===== NEW カードゲット画面 ===== */
+  #newCardOverlay{
+    position:fixed; inset:0; z-index:290; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(15,22,32,0.97); text-align:center; padding:20px;
+  }
+  #newCardOverlay.show{ display:flex; }
+  .ncg-label{ font-size:11px; color:#e0b94a; font-weight:700; letter-spacing:0.2em; margin-bottom:6px; }
+  .ncg-name{ font-size:19px; font-weight:700; color:#fbf7ef; margin-bottom:16px; }
+  .ncg-img{ width:min(60vw,220px); border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.7); display:block; margin:0 auto; }
+  .ncg-btns{ display:flex; gap:12px; margin-top:22px; }
+  .ncg-btn{ padding:10px 20px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .ncg-btn-col{ background:none; color:#fbf7ef; border:1.5px solid rgba(251,247,239,0.4); }
+  .ncg-btn-next{ background:#ee7a52; color:#fff; border:none; }
   .col-btn{
     background:none; border:1.5px solid #8b0000; color:#8b0000;
     border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
@@ -709,6 +727,17 @@
     <div id="map"></div>
     <div class="panel-actions">
       <button class="btn btn-guess" id="guessBtn" disabled>ここだ！</button>
+    </div>
+  </div>
+
+  <!-- NEW カードゲット画面 -->
+  <div id="newCardOverlay">
+    <div class="ncg-label">NEW CARD GET !</div>
+    <div class="ncg-name" id="newCardName"></div>
+    <img class="ncg-img" id="newCardImg" src="" alt="">
+    <div class="ncg-btns">
+      <button class="ncg-btn ncg-btn-col" id="newCardColBtn">図鑑を見る</button>
+      <button class="ncg-btn ncg-btn-next" id="newCardNextBtn">結果へ →</button>
     </div>
   </div>
 
@@ -1512,7 +1541,15 @@ function submitGuess(fromTimer=false, noAnswer=false){
     if(himPrize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
     else if(himPrize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
     showHimonoraCardThen(()=>{
-      document.getElementById("resultOverlay").classList.add("show");
+      if(himPrize===500000){
+        // 生け捕り：NEWカードゲット画面 → 結果
+        showNewCardOverlay(himonoraCurrentAnchor, ()=>{
+          document.getElementById("resultOverlay").classList.add("show");
+        });
+      } else {
+        // 遺体回収・写真撮影：そのまま結果へ
+        document.getElementById("resultOverlay").classList.add("show");
+      }
     }, _sText, _sColor);
   } else {
     showTakaraPhotoThen(()=>{
@@ -2223,11 +2260,14 @@ function showCollection(){
     const div=document.createElement("div");
     div.className="col-card"+(got.includes(a.no)?" got":"");
     if(got.includes(a.no)){
-      div.innerHTML=`<img src="${a.card}" alt="${a.name}" loading="lazy">`
-        +`<div class="col-no">No.${a.no}</div>`
-        +`<div class="col-name">${a.name}</div>`;
+      // 写真面（表）→ クリックでカード面（裏）に反転
+      div.innerHTML=`<div class="col-card-inner">`
+        +`<div class="col-card-face col-card-front-face"><img src="${a.photo}" alt="${a.name}" loading="lazy"><div class="col-name">${a.name}</div></div>`
+        +`<div class="col-card-face col-card-back-face"><img src="${a.card}" alt="${a.name}" loading="lazy"><div class="col-no">No.${a.no}</div></div>`
+        +`</div>`;
+      div.onclick=()=>div.classList.toggle("flipped");
     } else {
-      div.innerHTML=`<div class="col-lock">?</div><div class="col-no">No.${a.no}</div>`;
+      div.innerHTML=`<div class="col-card-inner"><div class="col-card-face col-card-front-face"><div class="col-lock">?</div><div class="col-no">No.${a.no}</div></div></div>`;
     }
     grid.appendChild(div);
   });
@@ -2236,6 +2276,23 @@ function showCollection(){
 function hideCollection(){ document.getElementById("collectionOverlay").classList.remove("show"); }
 document.getElementById("colCloseBtn").onclick=hideCollection;
 document.getElementById("colBtn").onclick=showCollection;
+
+// ===== NEW カードゲット画面 =====
+let _newCardDone=null;
+function showNewCardOverlay(anchor, done){
+  _newCardDone=done;
+  document.getElementById("newCardName").textContent=anchor.name;
+  document.getElementById("newCardImg").src=anchor.card;
+  document.getElementById("newCardOverlay").classList.add("show");
+}
+function hideNewCardOverlay(){
+  document.getElementById("newCardOverlay").classList.remove("show");
+  if(_newCardDone){ const f=_newCardDone; _newCardDone=null; f(); }
+}
+document.getElementById("newCardNextBtn").onclick=hideNewCardOverlay;
+document.getElementById("newCardColBtn").onclick=()=>{
+  showCollection(); // コレクション（z-index:300）がNEW画面の上に開く。閉じたらNEW画面に戻る
+};
 
 // ===== 待合室の沼津ミニ情報スライド =====
 // イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
