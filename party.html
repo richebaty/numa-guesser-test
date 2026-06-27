@@ -612,6 +612,33 @@
   }
   #hCFStamp.show{ animation:himStamp 0.45s cubic-bezier(.2,0,.1,1) forwards; }
   .h-cf-tap{ color:rgba(255,255,255,0.65); font-size:13px; margin-top:16px; }
+  /* ===== ヒモノラ コレクション ===== */
+  #collectionOverlay{
+    position:fixed; inset:0; z-index:300; display:none;
+    flex-direction:column; align-items:center;
+    background:rgba(15,22,32,0.97); overflow-y:auto;
+    padding:24px 16px 48px;
+  }
+  #collectionOverlay.show{ display:flex; }
+  .col-header{ display:flex; align-items:flex-start; justify-content:space-between; width:100%; max-width:420px; margin-bottom:14px; }
+  .col-header h2{ font-size:20px; font-weight:700; color:#fbf7ef; margin-bottom:2px; }
+  .col-count{ font-size:13px; color:rgba(251,247,239,0.55); }
+  .col-close{ background:none; border:none; color:rgba(251,247,239,0.55); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
+  .col-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; max-width:420px; }
+  .col-card{ border-radius:12px; overflow:hidden; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); }
+  .col-card.got{ border-color:#e0b94a; }
+  .col-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .col-card .col-no{ position:absolute; top:4px; left:7px; font-size:10px; color:rgba(255,255,255,0.65); font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
+  .col-card .col-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); font-size:9px; color:#fff; padding:3px 5px; text-align:center; }
+  .col-card .col-lock{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:36px; color:rgba(255,255,255,0.12); }
+  .col-btn{
+    background:none; border:1.5px solid #8b0000; color:#8b0000;
+    border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
+    font-family:inherit; cursor:pointer; margin-top:8px; display:none;
+    transition:background .15s;
+  }
+  .col-btn:active{ background:rgba(139,0,0,0.1); }
+  .splash.himonora-on .col-btn{ display:inline-block; }
   /* ===== ヒモノラを探せ！モード ===== */
   .himonora-bg{
     position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s;
@@ -683,6 +710,18 @@
     <div class="panel-actions">
       <button class="btn btn-guess" id="guessBtn" disabled>ここだ！</button>
     </div>
+  </div>
+
+  <!-- ヒモノラ コレクション図鑑 -->
+  <div id="collectionOverlay">
+    <div class="col-header">
+      <div>
+        <h2>ヒモノラ図鑑</h2>
+        <div class="col-count" id="colCount">0 / 15</div>
+      </div>
+      <button class="col-close" id="colCloseBtn">✕</button>
+    </div>
+    <div class="col-grid" id="colGrid"></div>
   </div>
 
   <!-- 宝100選 正解写真（回答後・結果の直前に数秒表示） -->
@@ -831,6 +870,7 @@
           <button class="diff-btn" id="diffHimonora">ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
+        <button class="col-btn" id="colBtn">コレクション図鑑を見る</button>
       </div>
 
       <!-- 主催者：待合室を作る -->
@@ -1467,6 +1507,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
   }
   // ヒモノラ成功時はカードフリップ→結果、その他は宝100選フォト→結果
   if(difficulty==="himonora" && himonoraAlive){
+    // 捕獲成功（生け捕り・回収・撮影）はすべてカードフリップ。図鑑保存は生け捕りのみ（showHimonoraCardThen内で判定）
     let _sText="捕獲", _sColor="rgba(220,30,30,0.92)";
     if(himPrize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
     else if(himPrize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
@@ -1495,6 +1536,7 @@ function showHimonoraCardThen(done, stampText, stampColor){
     inner.classList.remove("flipped");
     ov.onclick=null;
     const _st=document.getElementById("hCFStamp"); if(_st) _st.classList.remove("show");
+    if(himonoraCurrentAnchor && himPrize===500000) saveHimonoraCard(himonoraCurrentAnchor.no);
     setTimeout(done, 200);
   };
   // スタンプのテキストと色を設定
@@ -2167,6 +2209,33 @@ document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
 document.getElementById("diffTakara").onclick=()=>setDifficulty("takara");
 document.getElementById("diffTakaraHard").onclick=()=>setDifficulty("takara-hard");
 document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
+
+// ===== ヒモノラ コレクション =====
+const _COL_KEY="numaGuesserHimonoraCollection";
+function getCollection(){ try{ return JSON.parse(localStorage.getItem(_COL_KEY)||"[]"); }catch(e){ return []; } }
+function saveHimonoraCard(no){ if(!no) return; const c=getCollection(); if(!c.includes(no)){ c.push(no); localStorage.setItem(_COL_KEY,JSON.stringify(c)); } }
+function showCollection(){
+  const got=getCollection();
+  document.getElementById("colCount").textContent=got.length+" / "+HIMONORA_ANCHORS.length;
+  const grid=document.getElementById("colGrid");
+  grid.innerHTML="";
+  HIMONORA_ANCHORS.forEach(a=>{
+    const div=document.createElement("div");
+    div.className="col-card"+(got.includes(a.no)?" got":"");
+    if(got.includes(a.no)){
+      div.innerHTML=`<img src="${a.card}" alt="${a.name}" loading="lazy">`
+        +`<div class="col-no">No.${a.no}</div>`
+        +`<div class="col-name">${a.name}</div>`;
+    } else {
+      div.innerHTML=`<div class="col-lock">?</div><div class="col-no">No.${a.no}</div>`;
+    }
+    grid.appendChild(div);
+  });
+  document.getElementById("collectionOverlay").classList.add("show");
+}
+function hideCollection(){ document.getElementById("collectionOverlay").classList.remove("show"); }
+document.getElementById("colCloseBtn").onclick=hideCollection;
+document.getElementById("colBtn").onclick=showCollection;
 
 // ===== 待合室の沼津ミニ情報スライド =====
 // イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
