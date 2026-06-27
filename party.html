@@ -624,7 +624,7 @@
   .col-header h2{ font-size:20px; font-weight:700; color:#fbf7ef; margin-bottom:2px; }
   .col-count{ font-size:13px; color:rgba(251,247,239,0.55); }
   .col-close{ background:none; border:none; color:rgba(251,247,239,0.55); font-size:24px; cursor:pointer; padding:0 4px; line-height:1; }
-  .col-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; max-width:420px; }
+  .col-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; width:100%; max-width:420px; }
   .col-card{ border-radius:12px; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); cursor:pointer; perspective:800px; }
   .col-card.got{ border-color:#e0b94a; }
   .col-card-inner{ position:absolute; inset:0; transform-style:preserve-3d; transition:transform 0.5s ease; border-radius:10px; }
@@ -642,13 +642,21 @@
     background:rgba(15,22,32,0.97); text-align:center; padding:20px;
   }
   #newCardOverlay.show{ display:flex; }
-  .ncg-label{ font-size:11px; color:#e0b94a; font-weight:700; letter-spacing:0.2em; margin-bottom:6px; }
-  .ncg-name{ font-size:19px; font-weight:700; color:#fbf7ef; margin-bottom:16px; }
-  .ncg-img{ width:min(60vw,220px); border-radius:14px; box-shadow:0 12px 48px rgba(0,0,0,0.7); display:block; margin:0 auto; }
-  .ncg-btns{ display:flex; gap:12px; margin-top:22px; }
+  .ncg-label{ font-size:11px; color:#e0b94a; font-weight:700; letter-spacing:0.2em; margin-bottom:4px; }
+  .ncg-subtitle{ font-size:15px; color:#fbf7ef; margin-bottom:14px; }
+  #newCardList{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:380px; margin:0 auto 4px; overflow-y:auto; max-height:55vh; }
+  .ncg-card-item{ width:min(38vw,140px); flex-shrink:0; }
+  .ncg-card-item img{ width:100%; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.6); display:block; }
+  .ncg-card-name{ font-size:11px; color:rgba(251,247,239,0.7); text-align:center; margin-top:4px; }
+  .ncg-btns{ display:flex; gap:12px; margin-top:16px; }
   .ncg-btn{ padding:10px 20px; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; }
   .ncg-btn-col{ background:none; color:#fbf7ef; border:1.5px solid rgba(251,247,239,0.4); }
   .ncg-btn-next{ background:#ee7a52; color:#fff; border:none; }
+  /* ライトボックス */
+  #colLightbox{ position:fixed; inset:0; z-index:400; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); }
+  #colLightbox.show{ display:flex; }
+  #colLightboxClose{ position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.8); font-size:26px; cursor:pointer; z-index:401; line-height:1; }
+  #colLightboxImg{ max-width:88vw; max-height:88vh; border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,0.8); }
   .col-btn{
     background:none; border:1.5px solid #8b0000; color:#8b0000;
     border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
@@ -730,15 +738,21 @@
     </div>
   </div>
 
-  <!-- NEW カードゲット画面 -->
+  <!-- NEW カードゲット画面（ゲームオーバー時に新取得カードを一括表示） -->
   <div id="newCardOverlay">
     <div class="ncg-label">NEW CARD GET !</div>
-    <div class="ncg-name" id="newCardName"></div>
-    <img class="ncg-img" id="newCardImg" src="" alt="">
+    <div class="ncg-subtitle" id="ncgSubtitle"></div>
+    <div id="newCardList"></div>
     <div class="ncg-btns">
       <button class="ncg-btn ncg-btn-col" id="newCardColBtn">図鑑を見る</button>
-      <button class="ncg-btn ncg-btn-next" id="newCardNextBtn">結果へ →</button>
+      <button class="ncg-btn ncg-btn-next" id="newCardNextBtn">結果を見る</button>
     </div>
+  </div>
+
+  <!-- 図鑑カードのライトボックス（全画面拡大） -->
+  <div id="colLightbox">
+    <button id="colLightboxClose">✕</button>
+    <img id="colLightboxImg" src="" alt="">
   </div>
 
   <!-- ヒモノラ コレクション図鑑 -->
@@ -1169,6 +1183,7 @@ const HIMONORA_ANCHORS = [
   {no:56, name:"やまがた園・あおき屋",    lat:35.1256255, lng:138.8393115, panoId:"6naaf1tbMLyOWQIbly-k7w",    heading:308.7,  pitch:-5.56,  photo:"himonora/photo_56.jpg", card:"himonora/card_56.jpg"},
 ];
 let himonoraOrder=[], himonoraRoundIdx=0, himonoraCurrentAnchor=null, himonoraAlive=true, himPrize=0;
+let himNewCardsThisGame=[]; // このゲームセッションで新たにゲットしたカード
 const POINTS_PER_ROUND = 5000;
 const TANKA = [
   "千本の 松の梢に 風わたり\n沼津の海の 青を知るかな",
@@ -1238,7 +1253,7 @@ function composeRoundAnchors(){
 function buildRoundOrder(seed){
   if(difficulty==="himonora"){
     himonoraOrder=shuffle(HIMONORA_ANCHORS.slice());
-    himonoraRoundIdx=0; himonoraAlive=true;
+    himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[];
     return;
   }
   if(seed && seed.length){
@@ -1541,15 +1556,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
     if(himPrize===5000){ _sText="回収"; _sColor="rgba(220,110,0,0.92)"; }
     else if(himPrize===500){ _sText="撮影"; _sColor="rgba(30,150,60,0.92)"; }
     showHimonoraCardThen(()=>{
-      if(himPrize===500000){
-        // 生け捕り：NEWカードゲット画面 → 結果
-        showNewCardOverlay(himonoraCurrentAnchor, ()=>{
-          document.getElementById("resultOverlay").classList.add("show");
-        });
-      } else {
-        // 遺体回収・写真撮影：そのまま結果へ
-        document.getElementById("resultOverlay").classList.add("show");
-      }
+      document.getElementById("resultOverlay").classList.add("show");
     }, _sText, _sColor);
   } else {
     showTakaraPhotoThen(()=>{
@@ -1647,7 +1654,16 @@ function next(){
   }
   if(difficulty==="himonora"){
     // 対戦でも各自ペース（同期なし）。捕獲できなかった人はそこで終了。
-    if(!himonoraAlive) showFinal(); else startRound();
+    if(!himonoraAlive){
+      // ゲームオーバー：今回ゲットした新カードがあれば一括表示
+      if(himNewCardsThisGame.length>0){
+        showNewCardsGetOverlay(himNewCardsThisGame, ()=>showFinal());
+      } else {
+        showFinal();
+      }
+    } else {
+      startRound();
+    }
     return;
   }
   if(!isVersus){
@@ -2250,7 +2266,17 @@ document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 // ===== ヒモノラ コレクション =====
 const _COL_KEY="numaGuesserHimonoraCollection";
 function getCollection(){ try{ return JSON.parse(localStorage.getItem(_COL_KEY)||"[]"); }catch(e){ return []; } }
-function saveHimonoraCard(no){ if(!no) return; const c=getCollection(); if(!c.includes(no)){ c.push(no); localStorage.setItem(_COL_KEY,JSON.stringify(c)); } }
+function saveHimonoraCard(no){
+  if(!no) return;
+  const c=getCollection();
+  if(!c.includes(no)){
+    c.push(no);
+    localStorage.setItem(_COL_KEY,JSON.stringify(c));
+    // このゲームで初めてゲットしたカードとして記録
+    const anchor=HIMONORA_ANCHORS.find(a=>a.no===no);
+    if(anchor) himNewCardsThisGame.push(anchor);
+  }
+}
 function showCollection(){
   const got=getCollection();
   document.getElementById("colCount").textContent=got.length+" / "+HIMONORA_ANCHORS.length;
@@ -2265,7 +2291,16 @@ function showCollection(){
         +`<div class="col-card-face col-card-front-face"><img src="${a.photo}" alt="${a.name}" loading="lazy"><div class="col-name">${a.name}</div></div>`
         +`<div class="col-card-face col-card-back-face"><img src="${a.card}" alt="${a.name}" loading="lazy"><div class="col-no">No.${a.no}</div></div>`
         +`</div>`;
-      div.onclick=()=>div.classList.toggle("flipped");
+      div.onclick=()=>{
+        if(div.classList.contains("flipped")){
+          // カード面を表示中 → ライトボックスで全画面拡大
+          document.getElementById("colLightboxImg").src=a.card;
+          document.getElementById("colLightbox").classList.add("show");
+        } else {
+          // 写真面を表示中 → カード面に反転
+          div.classList.add("flipped");
+        }
+      };
     } else {
       div.innerHTML=`<div class="col-card-inner"><div class="col-card-face col-card-front-face"><div class="col-lock">?</div><div class="col-no">No.${a.no}</div></div></div>`;
     }
@@ -2277,12 +2312,20 @@ function hideCollection(){ document.getElementById("collectionOverlay").classLis
 document.getElementById("colCloseBtn").onclick=hideCollection;
 document.getElementById("colBtn").onclick=showCollection;
 
-// ===== NEW カードゲット画面 =====
+// ===== NEW カードゲット画面（ゲームオーバー時に一括表示） =====
 let _newCardDone=null;
-function showNewCardOverlay(anchor, done){
+function showNewCardsGetOverlay(cards, done){
   _newCardDone=done;
-  document.getElementById("newCardName").textContent=anchor.name;
-  document.getElementById("newCardImg").src=anchor.card;
+  const sub=document.getElementById("ncgSubtitle");
+  if(sub) sub.textContent=cards.length+"枚のカードをゲット！";
+  const list=document.getElementById("newCardList");
+  list.innerHTML="";
+  cards.forEach(a=>{
+    const div=document.createElement("div");
+    div.className="ncg-card-item";
+    div.innerHTML=`<img src="${a.card}" alt="${a.name}" loading="lazy"><div class="ncg-card-name">${a.name}</div>`;
+    list.appendChild(div);
+  });
   document.getElementById("newCardOverlay").classList.add("show");
 }
 function hideNewCardOverlay(){
@@ -2290,9 +2333,10 @@ function hideNewCardOverlay(){
   if(_newCardDone){ const f=_newCardDone; _newCardDone=null; f(); }
 }
 document.getElementById("newCardNextBtn").onclick=hideNewCardOverlay;
-document.getElementById("newCardColBtn").onclick=()=>{
-  showCollection(); // コレクション（z-index:300）がNEW画面の上に開く。閉じたらNEW画面に戻る
-};
+document.getElementById("newCardColBtn").onclick=showCollection;
+// ライトボックス
+document.getElementById("colLightboxClose").onclick=(e)=>{ e.stopPropagation(); document.getElementById("colLightbox").classList.remove("show"); };
+document.getElementById("colLightbox").onclick=()=>document.getElementById("colLightbox").classList.remove("show");
 
 // ===== 待合室の沼津ミニ情報スライド =====
 // イラストは写真の転載ではなく、特徴をとらえた手描き風のオリジナル。色はトップ画面と統一。
