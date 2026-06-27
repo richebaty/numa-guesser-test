@@ -706,6 +706,34 @@
   /* diffボタン */
   #diffHimonora{ background:transparent; color:#6b0000; border-color:#6b0000; }
   #diffHimonora.active{ background:#6b0000; color:#fff; border-color:#6b0000; }
+
+/* ===== 宝100選コレクション ===== */
+.takara-col-btn{ display:none; margin-top:12px; background:rgba(255,255,255,0.82); border:2px solid var(--coral); color:var(--sea-deep); font-size:14px; padding:8px 20px; border-radius:22px; font-weight:700; cursor:pointer; }
+.takara-col-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:5000; flex-direction:column; }
+.takara-col-overlay.show{ display:flex; }
+.takara-col-header{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--sea-deep); color:#fff; }
+.takara-col-title{ font-size:18px; font-weight:700; letter-spacing:2px; }
+.takara-col-count{ font-size:14px; margin-left:12px; opacity:.8; }
+.takara-col-close{ background:transparent; border:none; color:#fff; font-size:22px; cursor:pointer; padding:0 4px; }
+.takara-col-rank-row{ padding:8px 16px; background:rgba(255,255,255,0.06); }
+.takara-rank-badge{ display:inline-block; padding:4px 14px; border-radius:20px; font-size:13px; font-weight:700; }
+.takara-rank-master{ background:var(--gold); color:#5a3a00; }
+.takara-rank-meijin{ background:#b0b0c8; color:#222; }
+.takara-rank-sensei{ background:#c97a3a; color:#fff; }
+.takara-col-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:12px; overflow-y:auto; flex:1; }
+.takara-col-cell{ aspect-ratio:1; border-radius:8px; overflow:hidden; position:relative; background:#1a3a50; cursor:pointer; }
+.takara-col-cell img{ width:100%; height:100%; object-fit:cover; display:block; }
+.takara-col-cell .tcell-num{ position:absolute; top:3px; left:5px; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; }
+.takara-col-cell .tcell-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.55); color:#fff; font-size:9px; padding:2px 4px; text-align:center; line-height:1.2; }
+.takara-col-cell.locked{ opacity:0.25; cursor:default; }
+.takara-lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:6000; flex-direction:column; align-items:center; justify-content:center; }
+.takara-lightbox.show{ display:flex; }
+.takara-lightbox img{ max-width:90vw; max-height:55vh; object-fit:contain; border-radius:10px; }
+.takara-lightbox .tlb-name{ color:#fff; font-size:18px; font-weight:700; margin-top:12px; text-align:center; }
+.takara-lightbox .tlb-no{ color:rgba(255,255,255,0.6); font-size:13px; margin-bottom:6px; }
+.takara-lightbox .tlb-url{ color:var(--coral); font-size:12px; margin-top:6px; text-decoration:underline; }
+.takara-lightbox .tlb-close{ margin-top:16px; background:transparent; border:2px solid rgba(255,255,255,0.4); color:#fff; padding:8px 24px; border-radius:22px; font-size:14px; cursor:pointer; }
+.takara-new-banner{ background:var(--sea-deep); color:#fff; border-radius:12px; padding:10px 16px; margin-bottom:10px; font-size:14px; font-weight:700; text-align:center; }
 </style>
 <!-- Firebase (対戦機能用) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -859,6 +887,7 @@
       <button class="btn btn-guess" id="reviewBtn" style="display:none; margin-bottom:10px;">ふりかえりを見る 🗺️</button>
       <button class="btn btn-guess" id="restartBtn">もう一回 ↺</button>
       <button class="btn btn-ghost" id="finalColBtn" style="display:none; margin-top:10px;">カードコレクションを見る</button>
+      <button class="btn btn-ghost" id="takaraFinalColBtn" style="display:none; margin-top:4px;">ぬまづの宝100選図鑑を見る</button>
       <button class="btn btn-ghost" id="homeBtn" style="margin-top:10px;">ホームへ ⌂</button>
     </div>
   </div>
@@ -937,6 +966,7 @@
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
         <button class="col-btn" id="colBtn">カードコレクションを見る</button>
+      <button class="col-btn takara-col-btn" id="takaraColSplashBtn">ぬまづの宝100選図鑑を見る</button>
       </div>
 
       <!-- 主催者：待合室を作る -->
@@ -1024,6 +1054,157 @@ const EMBEDDED_API_KEY = "AIzaSyCL4nlsFMiGZzDOgcJd-_Ioj-rFu_Uz4KQ";
 //    （写真が無い地点は自動でスキップします）
 const TAKARA_PHOTO_DIR  = "images/";   // 画像フォルダ名
 const TAKARA_PHOTO_SECS = 3;           // 写真を映す秒数（タップでスキップ可）
+// ===== 宝100選コレクション定数 =====
+const TAKARA_PHOTO_MAP = {
+  1:"images/001.jpg",2:"images/002.jpg",3:"images/003.jpg",4:"images/004.jpg",5:"images/005.jpg",
+  6:"images/006.jpg",7:"images/007.jpg",8:"images/008.jpg",9:"images/009.jpg",10:"images/010.jpg",
+  11:"images/011.jpg",12:"images/012.jpg",13:"images/013.jpg",14:"images/014.jpg",15:"images/015.jpg",
+  16:"images/016.jpg",17:"images/017.jpg",18:"images/018.jpg",19:"images/019.jpg",20:"images/020.jpg",
+  21:"images/021.jpg",22:"images/022.jpg",23:"images/023.jpg",24:"images/024.jpg",25:"images/025.jpg",
+  26:"images/026.jpg",27:"images/027.jpg",28:"images/028.jpg",29:"images/029.jpg",30:"images/030.jpg",
+  31:"images/031.jpg",32:"images/032.jpg",33:"images/033.jpg",34:"images/034.jpg",35:"images/035.jpg",
+  36:"images/036.jpg",37:"images/037.jpg",38:"images/038.jpg",39:"images/039.jpg",40:"images/040.jpg",
+  41:"images/041.jpg",42:"images/042.jpg",43:"images/043.jpg",44:"images/044.jpg",45:"images/045.jpg",
+  46:"images/046.jpg",47:"images/047.jpg",48:"images/048.jpg",49:"images/049.jpg",50:"images/050.jpg",
+  51:"images/051.jpg",52:"images/052.jpg",53:"images/053.jpg",54:"images/054.jpg",55:"images/055.jpg",
+  56:"images/056.jpg",57:"images/057.jpg",58:"images/058.jpg",59:"images/059.jpg",60:"images/060.jpg",
+  61:"images/061.jpg",62:"images/062.jpg",63:"images/063.jpg",64:"images/064.jpg",65:"images/065.jpg",
+  66:"images/066.jpg",67:"images/067.jpg",68:"images/068.jpg",69:"images/069.jpg",70:"images/070.jpg",
+  71:"images/071.jpg",72:"images/072.jpg",73:"images/073.jpg",74:"images/074.jpg",75:"images/075.jpg",
+  76:"images/076.jpg",77:"images/077.jpg",78:"images/078.jpg",79:"images/079.jpg",80:"images/080.jpg",
+  81:"images/081.jpg",82:"images/082.jpg",83:"images/083.jpg",84:"images/084.jpg",85:"images/085.jpg",
+  86:"images/086.jpg",87:"images/087.jpg",88:"images/088.jpg",89:"images/089.jpg",90:"images/090.jpg",
+  91:"images/091.jpg",92:"images/092.jpg",93:"images/093.jpg",94:"images/094.jpg",95:"images/095.jpg",
+  96:"images/096.jpg",97:"images/097.jpg",98:"images/098.jpg",99:"images/099.jpg",100:"images/100.jpg"
+};
+const TAKARA_NAMES = {
+  1:"愛鷹広域公園",2:"愛鷹山",3:"鮎壺の滝",4:"淡島",5:"伊豆半島ジオパーク",
+  6:"井田の菜の花畑",7:"浮島ひまわりらんど・なのはならんど",8:"牛臥山公園",9:"大平の石神・石仏群",10:"岡宮浅間神社のクス",
+  11:"大瀬崎",12:"門池",13:"狩野川",14:"北山の棚田",15:"金冠山",
+  16:"河内の大スギ",17:"三浦地区のリアス海岸",18:"千本松原",19:"達磨山",20:"ダルマ夕日",
+  21:"沼津アルプス",22:"沼津から見る富士山",23:"沼津の海",24:"沼津の桜の名所",25:"沼津の湧水群",
+  26:"はかま滝",27:"戸田の富士山展望スポット",28:"発端丈山",29:"御浜岬",30:"赤野観音堂",
+  31:"阿野全成と大泉寺",32:"伊豆石産業遺産群",33:"江原素六",34:"御成橋",35:"海軍技研址の碑",
+  36:"狩野川放水路",37:"旧三津坂隧道",38:"興国寺城跡",39:"光長寺",40:"興農学園農場",
+  41:"金剛寺（文覚上人と金女郎狐）",42:"三枚橋城・沼津城と沼津兵学校",43:"蛇松緑道",44:"松蔭寺と白隠禅師",45:"禅長寺",
+  46:"大中寺恩香殿と鐘楼門",47:"帯笑園",48:"高尾山古墳と祭典",49:"高沢公園のSL",50:"長浜城跡",
+  51:"沼津御用邸記念公園",52:"浜の観音さん（長谷寺）",53:"日枝神社",54:"松城家住宅",55:"安田屋旅館 松棟・月棟",
+  56:"洋式帆船建造地跡（ディアナ号/ヘダ号）",57:"明石海人（歌碑）",58:"井上靖（文学碑）",59:"内浦・静浦及び周辺地域の漁撈用具",60:"江浦水祝儀と裸参り",
+  61:"大瀬まつり・内浦漁港祭",62:"おんべこんべ",63:"海中みそぎ",64:"我入道の渡し船",65:"吟道の碑",
+  66:"ごぜ芸能まつり",67:"潮の音プロムナードと文学碑",68:"芹沢光治良記念館",69:"天王祭",70:"沼津垣",
+  71:"沼津の歌（歌碑）",72:"BARのまち・沼津のBAR文化",73:"原海岸と地引網",74:"戸田の漁師踊り",75:"モン・ミュゼ沼津（庄司美術館）",
+  76:"若山牧水（記念館）",77:"あしたか牛",78:"西浦みかん",79:"西浦レモネード",80:"沼津の寿司",
+  81:"ひもの（あじの干物）",82:"戸田たちばな",83:"戸田の塩（戸田塩）",84:"アスルクラロ沼津",85:"こいのぼりフェスティバル",
+  86:"スカンジナビア号（ステラポラリス）",87:"仲見世通り（七夕まつり）",88:"沼津夏まつり・狩野川花火大会",89:"フェンシングのまち",90:"戸田港まつり",
+  91:"よさこい東海道",92:"ラブライブ！サンシャイン!!の聖地",93:"らららサンビーチ",94:"泉水源地",95:"深海魚",
+  96:"せせらぎの径と沼津ホタルまつり",97:"タカアシガニと甲羅のお面",98:"沼津港と大型展望水門びゅうお",99:"沼津茶と茶の湯・茶会文化",100:"沼津方式（ごみの分別収集）"
+};
+const TAKARA_URLS = {
+  1:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/001.htm",
+  2:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/002.htm",
+  3:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/003.htm",
+  4:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/004.htm",
+  5:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/005.htm",
+  6:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/006.htm",
+  7:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/007.htm",
+  8:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/008.htm",
+  9:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/009.htm",
+  10:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/010.htm",
+  11:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/011.htm",
+  12:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/012.htm",
+  13:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/013.htm",
+  14:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/014.htm",
+  15:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/015.htm",
+  16:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/016.htm",
+  17:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/017.htm",
+  18:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/018.htm",
+  19:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/019.htm",
+  20:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/020.htm",
+  21:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/021.htm",
+  22:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/022.htm",
+  23:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/023.htm",
+  24:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/024.htm",
+  25:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/025.htm",
+  26:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/026.htm",
+  27:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/027.htm",
+  28:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/028.htm",
+  29:"https://www.city.numazu.shizuoka.jp/takara100/category/shizen/029.htm",
+  30:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/030.htm",
+  31:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/031.htm",
+  32:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/032.htm",
+  33:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/033.htm",
+  34:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/034.htm",
+  35:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/035.htm",
+  36:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/036.htm",
+  37:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/037.htm",
+  38:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/038.htm",
+  39:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/039.htm",
+  40:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/040.htm",
+  41:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/041.htm",
+  42:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/042.htm",
+  43:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/043.htm",
+  44:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/044.htm",
+  45:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/045.htm",
+  46:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/046.htm",
+  47:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/047.htm",
+  48:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/048.htm",
+  49:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/049.htm",
+  50:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/050.htm",
+  51:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/051.htm",
+  52:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/052.htm",
+  53:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/053.htm",
+  54:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/054.htm",
+  55:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/055.htm",
+  56:"https://www.city.numazu.shizuoka.jp/takara100/category/rekishi/056.htm",
+  57:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/057.htm",
+  58:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/058.htm",
+  59:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/059.htm",
+  60:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/060.htm",
+  61:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/061.htm",
+  62:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/062.htm",
+  63:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/063.htm",
+  64:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/064.htm",
+  65:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/065.htm",
+  66:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/066.htm",
+  67:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/067.htm",
+  68:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/068.htm",
+  69:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/069.htm",
+  70:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/070.htm",
+  71:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/071.htm",
+  72:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/072.htm",
+  73:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/073.htm",
+  74:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/074.htm",
+  75:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/075.htm",
+  76:"https://www.city.numazu.shizuoka.jp/takara100/category/bunka/076.htm",
+  77:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/077.htm",
+  78:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/078.htm",
+  79:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/079.htm",
+  80:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/080.htm",
+  81:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/081.htm",
+  82:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/082.htm",
+  83:"https://www.city.numazu.shizuoka.jp/takara100/category/mikaku/083.htm",
+  84:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/084.htm",
+  85:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/085.htm",
+  86:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/086.htm",
+  87:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/087.htm",
+  88:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/088.htm",
+  89:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/089.htm",
+  90:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/090.htm",
+  91:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/091.htm",
+  92:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/092.htm",
+  93:"https://www.city.numazu.shizuoka.jp/takara100/category/nigiwai/093.htm",
+  94:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/094.htm",
+  95:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/095.htm",
+  96:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/096.htm",
+  97:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/097.htm",
+  98:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/098.htm",
+  99:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/099.htm",
+  100:"https://www.city.numazu.shizuoka.jp/takara100/category/mugen/100.htm"
+};
+const _TAKARA_COL_KEY = "numaGuesserTakaraCollection";
+const TAKARA_COLLECT_M = 20;
+let takaraNewThisGame = [];
+
 // ============================================================
 //  ▲▲▲ 設定はここまで ▲▲▲
 // ============================================================
@@ -1536,6 +1717,19 @@ function submitGuess(fromTimer=false, noAnswer=false){
       tn.style.display="none";
     }
   }
+  // 宝100選コレクション判定（ヒモノラモード以外、20m以内）
+  if(difficulty!=="himonora" && target.takaraNo && km !== null && km * 1000 <= TAKARA_COLLECT_M){
+    const tno = target.takaraNo;
+    const col = getTakaraCollection();
+    if(!col.includes(tno)){
+      col.push(tno);
+      try{ localStorage.setItem(_TAKARA_COL_KEY, JSON.stringify(col)); }catch(e){}
+      takaraNewThisGame.push(tno);
+    }
+    if(tn && tn.style.display !== "none"){
+      tn.innerHTML += ' <span class="badge" style="background:#e9a820;color:#fff;">お宝ゲット！</span>';
+    }
+  }
   if(difficulty==="himonora"){
     document.getElementById("resultTitle").textContent=himonoraAlive?"ヒモノラ捕獲！🎉":"捕獲失敗…";
   } else if(noAnswer || !guessLatLng){
@@ -1829,6 +2023,26 @@ function showFinal(){
   }
   // 通常モードでは図鑑ボタンを非表示
   const _fcb2=document.getElementById("finalColBtn"); if(_fcb2) _fcb2.style.display="none";
+  // 宝100選コレクションボタン（ヒモノラ以外で表示）
+  const _tfcb = document.getElementById("takaraFinalColBtn");
+  if(_tfcb){
+    const isTakaraMode = (difficulty==="takara"||difficulty==="takara-hard");
+    const _tcol = getTakaraCollection();
+    _tfcb.style.display = (isTakaraMode || _tcol.length > 0) ? "" : "none";
+    if(takaraNewThisGame.length > 0){
+      const _existing = document.getElementById("takaraBanner");
+      if(!_existing){
+        const _banner = document.createElement("div");
+        _banner.id = "takaraBanner";
+        _banner.className = "takara-new-banner";
+        const _rk = rankTakara(_tcol.length);
+        _banner.innerHTML = "お宝 " + takaraNewThisGame.length + " 個をゲットしました！" +
+          (_rk ? ' <span class="takara-rank-badge '+_rk.cls+'" style="font-size:11px;padding:2px 10px;">'+escapeHtml(_rk.label)+'</span>' : "");
+        _tfcb.parentNode.insertBefore(_banner, _tfcb);
+      }
+      takaraNewThisGame = [];
+    }
+  }
   document.getElementById("finalScore").textContent=total.toLocaleString();
   const pct=total/(POINTS_PER_ROUND*MAX_ROUNDS);
   document.getElementById("finalRank").innerHTML = rankRuby(pct);
@@ -2289,12 +2503,70 @@ function setDifficulty(d){
   if(sp) sp.classList.toggle("takara-hard-on", d==="takara-hard");
   if(sp) sp.classList.toggle("hard-on", d==="hard");
   if(sp) sp.classList.toggle("himonora-on", d==="himonora");
+  // 宝100選図鑑ボタン：takara/takara-hard のみ表示
+  const _tcsb = document.getElementById("takaraColSplashBtn");
+  if(_tcsb) _tcsb.style.display = (d==="takara"||d==="takara-hard") ? "inline-block" : "none";
 }
 document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
 document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
 document.getElementById("diffTakara").onclick=()=>setDifficulty("takara");
 document.getElementById("diffTakaraHard").onclick=()=>setDifficulty("takara-hard");
 document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
+
+// ===== 宝100選コレクション関数 =====
+function getTakaraCollection(){ try{ return JSON.parse(localStorage.getItem(_TAKARA_COL_KEY)||"[]"); }catch(e){ return []; } }
+function rankTakara(count){
+  if(count>=100) return {label:"沼津の宝100選マスター",cls:"takara-rank-master"};
+  if(count>=80)  return {label:"沼津の宝100選名人",   cls:"takara-rank-meijin"};
+  if(count>=60)  return {label:"沼津の宝100選先生",   cls:"takara-rank-sensei"};
+  return null;
+}
+function openTakaraLightbox(no){
+  const lb=document.getElementById("takaraLightbox");
+  if(!lb) return;
+  const col=getTakaraCollection();
+  if(!col.includes(no)) return;
+  document.getElementById("tlbNo").textContent="No."+String(no).padStart(3,"0");
+  document.getElementById("tlbImg").src=TAKARA_PHOTO_MAP[no]||"";
+  document.getElementById("tlbName").textContent=TAKARA_NAMES[no]||"";
+  const ua=document.getElementById("tlbUrl");
+  if(TAKARA_URLS[no]){ ua.href=TAKARA_URLS[no]; ua.textContent="沼津市公式ページを見る"; ua.style.display=""; }
+  else { ua.style.display="none"; }
+  lb.classList.add("show");
+}
+function showTakaraCollection(){
+  const ov=document.getElementById("takaraColOverlay");
+  if(!ov) return;
+  const col=getTakaraCollection();
+  document.getElementById("takaraColCount").textContent=col.length+" / 100";
+  const rr=document.getElementById("takaraColRankRow");
+  const rk=rankTakara(col.length);
+  rr.innerHTML=rk?'<span class="takara-rank-badge '+rk.cls+'">'+escapeHtml(rk.label)+'</span>':"";
+  const grid=document.getElementById("takaraColGrid");
+  grid.innerHTML="";
+  for(let i=1;i<=100;i++){
+    const got=col.includes(i);
+    const cell=document.createElement("div");
+    cell.className="takara-col-cell"+(got?"":" locked");
+    if(got){
+      const img=document.createElement("img");
+      img.src=TAKARA_PHOTO_MAP[i]||"";
+      img.alt=TAKARA_NAMES[i]||"";
+      img.onerror=function(){ this.style.display="none"; };
+      cell.appendChild(img);
+      cell.onclick=()=>openTakaraLightbox(i);
+    }
+    const num=document.createElement("div"); num.className="tcell-num"; num.textContent=String(i).padStart(3,"0");
+    const nm=document.createElement("div"); nm.className="tcell-name"; nm.textContent=got?(TAKARA_NAMES[i]||""):"？";
+    cell.appendChild(num); cell.appendChild(nm);
+    grid.appendChild(cell);
+  }
+  ov.classList.add("show");
+}
+document.getElementById("takaraColSplashBtn").onclick=showTakaraCollection;
+document.getElementById("takaraFinalColBtn").onclick=showTakaraCollection;
+document.getElementById("takaraColCloseBtn").onclick=()=>document.getElementById("takaraColOverlay").classList.remove("show");
+document.getElementById("tlbClose").onclick=()=>document.getElementById("takaraLightbox").classList.remove("show");
 
 // ===== ヒモノラ コレクション =====
 const _COL_KEY="numaGuesserHimonoraCollection";
@@ -2634,5 +2906,24 @@ checkPublishPeriod();
   }catch(e){ /* 何もしない（通常起動） */ }
 })();
 </script>
+
+<div id="takaraColOverlay" class="takara-col-overlay">
+  <div class="takara-col-header">
+    <div>
+      <span class="takara-col-title">ぬまづの宝100選図鑑</span>
+      <span class="takara-col-count" id="takaraColCount">0 / 100</span>
+    </div>
+    <button class="takara-col-close" id="takaraColCloseBtn">✕</button>
+  </div>
+  <div class="takara-col-rank-row" id="takaraColRankRow"></div>
+  <div class="takara-col-grid" id="takaraColGrid"></div>
+</div>
+<div id="takaraLightbox" class="takara-lightbox">
+  <div class="tlb-no" id="tlbNo"></div>
+  <img id="tlbImg" src="" alt="">
+  <div class="tlb-name" id="tlbName"></div>
+  <a class="tlb-url" id="tlbUrl" href="#" target="_blank" rel="noopener"></a>
+  <button class="tlb-close" id="tlbClose">閉じる</button>
+</div>
 </body>
 </html>
