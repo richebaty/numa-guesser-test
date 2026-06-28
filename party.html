@@ -720,13 +720,13 @@
 .takara-rank-master{ background:var(--gold); color:#5a3a00; }
 .takara-rank-meijin{ background:#b0b0c8; color:#222; }
 .takara-rank-sensei{ background:#c97a3a; color:#fff; }
-.takara-col-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:10px; overflow-y:auto; flex:1; }
-.takara-col-cell{ aspect-ratio:1; border-radius:8px; overflow:hidden; position:relative; background:#1a3a50; cursor:pointer; }
+.takara-col-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; padding:12px; overflow-y:auto; flex:1; }
+.takara-col-cell{ border-radius:10px; aspect-ratio:240/336; position:relative; background:#1e2c3c; border:2px solid rgba(255,255,255,0.08); overflow:hidden; cursor:pointer; }
+.takara-col-cell.got{ border-color:var(--coral); }
 .takara-col-cell img{ width:100%; height:100%; object-fit:cover; display:block; }
-.takara-col-cell .tcell-num{ position:absolute; top:3px; left:5px; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; }
-.takara-col-cell .tcell-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.62); color:#fff; font-size:8px; padding:3px 3px; text-align:center; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.takara-col-cell.locked{ opacity:0.2; cursor:default; }
-.takara-col-cell.locked .tcell-name{ background:rgba(0,0,0,0.35); }
+.takara-col-cell .tcell-num{ position:absolute; top:4px; left:5px; font-size:9px; color:rgba(255,255,255,0.65); font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
+.takara-col-cell .tcell-name{ position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.62); color:#fff; font-size:8px; padding:3px 4px; text-align:center; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.takara-col-cell .tcell-lock{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:22px; color:rgba(255,255,255,0.1); }
 .takara-lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:6000; flex-direction:column; align-items:center; justify-content:center; }
 .takara-lightbox.show{ display:flex; }
 .takara-lightbox img{ max-width:90vw; max-height:55vh; object-fit:contain; border-radius:10px; }
@@ -2567,7 +2567,7 @@ function showTakaraCollection(){
   for(let i=1;i<=100;i++){
     const got=col.includes(i);
     const cell=document.createElement("div");
-    cell.className="takara-col-cell"+(got?"":" locked");
+    cell.className="takara-col-cell"+(got?" got":"");
     if(got){
       const img=document.createElement("img");
       img.src=TAKARA_PHOTO_MAP[i]||"";
@@ -2575,6 +2575,9 @@ function showTakaraCollection(){
       img.onerror=function(){ this.style.display="none"; };
       cell.appendChild(img);
       cell.onclick=()=>openTakaraLightbox(i);
+    } else {
+      const lk=document.createElement("div"); lk.className="tcell-lock"; lk.textContent="？";
+      cell.appendChild(lk);
     }
     const num=document.createElement("div"); num.className="tcell-num"; num.textContent=String(i).padStart(3,"0");
     const nm=document.createElement("div"); nm.className="tcell-name"; nm.textContent=TAKARA_NAMES[i]||String(i);
