@@ -1042,6 +1042,25 @@
   </div>
 </div>
 
+<div id="takaraColOverlay" class="takara-col-overlay">
+  <div class="takara-col-header">
+    <div>
+      <span class="takara-col-title">ぬまづの宝100選図鑑</span>
+      <span class="takara-col-count" id="takaraColCount">0 / 100</span>
+    </div>
+    <button class="takara-col-close" id="takaraColCloseBtn">✕</button>
+  </div>
+  <div class="takara-col-rank-row" id="takaraColRankRow"></div>
+  <div class="takara-col-grid" id="takaraColGrid"></div>
+</div>
+<div id="takaraLightbox" class="takara-lightbox">
+  <div class="tlb-no" id="tlbNo"></div>
+  <img id="tlbImg" src="" alt="">
+  <div class="tlb-name" id="tlbName"></div>
+  <a class="tlb-url" id="tlbUrl" href="#" target="_blank" rel="noopener"></a>
+  <button class="tlb-close" id="tlbClose">閉じる</button>
+</div>
+
 <script>
 // ============================================================
 //  ▼▼▼ 運用設定（書き換えるのはこの2つだけ） ▼▼▼
@@ -2906,24 +2925,5 @@ checkPublishPeriod();
   }catch(e){ /* 何もしない（通常起動） */ }
 })();
 </script>
-
-<div id="takaraColOverlay" class="takara-col-overlay">
-  <div class="takara-col-header">
-    <div>
-      <span class="takara-col-title">ぬまづの宝100選図鑑</span>
-      <span class="takara-col-count" id="takaraColCount">0 / 100</span>
-    </div>
-    <button class="takara-col-close" id="takaraColCloseBtn">✕</button>
-  </div>
-  <div class="takara-col-rank-row" id="takaraColRankRow"></div>
-  <div class="takara-col-grid" id="takaraColGrid"></div>
-</div>
-<div id="takaraLightbox" class="takara-lightbox">
-  <div class="tlb-no" id="tlbNo"></div>
-  <img id="tlbImg" src="" alt="">
-  <div class="tlb-name" id="tlbName"></div>
-  <a class="tlb-url" id="tlbUrl" href="#" target="_blank" rel="noopener"></a>
-  <button class="tlb-close" id="tlbClose">閉じる</button>
-</div>
 </body>
 </html>
