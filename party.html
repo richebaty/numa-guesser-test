@@ -675,13 +675,13 @@
   .cmp-p{ position:absolute; font-size:18px; animation:floatUp 1.8s ease forwards; }
   .cmp-btn{ background:#e0b94a; color:#1a2634; border:none; border-radius:12px; padding:12px 28px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 4px 16px rgba(224,185,74,0.4); }
   .col-btn{
-    background:none; border:1.5px solid #8b0000; color:#8b0000;
-    border-radius:8px; padding:5px 14px; font-size:12px; font-weight:700;
+    background:none; border:2px solid #8b0000; color:#8b0000;
+    border-radius:22px; padding:9px 20px; font-size:14px; font-weight:700;
     font-family:inherit; cursor:pointer; margin-top:8px; display:none;
     transition:background .15s;
   }
   .col-btn:active{ background:rgba(139,0,0,0.1); }
-  .splash.himonora-on .col-btn{ display:block; }
+  .splash.himonora-on .col-btn{ display:block; margin-left:auto; margin-right:auto; }
   /* ===== ヒモノラを探せ！モード ===== */
   .himonora-bg{
     position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s;
@@ -708,7 +708,7 @@
   #diffHimonora.active{ background:#6b0000; color:#fff; border-color:#6b0000; }
 
 /* ===== 宝100選コレクション ===== */
-.takara-col-btn{ display:none; margin-top:8px; background:rgba(255,255,255,0.82); border:2px solid var(--coral); color:var(--sea-deep); font-size:14px; padding:9px 20px; border-radius:22px; font-weight:700; cursor:pointer; }
+.takara-col-btn{ display:none; margin-top:8px; margin-left:auto; margin-right:auto; background:rgba(255,255,255,0.82); border:2px solid var(--coral); color:var(--sea-deep); font-size:14px; padding:9px 20px; border-radius:22px; font-weight:700; cursor:pointer; }
 .takara-col-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:5000; flex-direction:column; }
 .takara-col-overlay.show{ display:flex; }
 .takara-col-body{ flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; align-items:center; }
