@@ -1758,6 +1758,7 @@ function submitGuess(fromTimer=false, noAnswer=false){
       try{ localStorage.setItem(_TAKARA_COL_KEY, JSON.stringify(col)); }catch(e){}
       takaraNewThisGame.push(tno);
       _unseenNewTakara.add(tno);
+      try{ localStorage.setItem(_TAKARA_UNSEEN_KEY, JSON.stringify([..._unseenNewTakara])); }catch(e){}
     }
     if(tn && tn.style.display !== "none"){
       tn.innerHTML += ' <span class="badge" style="background:#e9a820;color:#fff;">お宝ゲット！</span>';
@@ -2549,6 +2550,9 @@ document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 // ===== 宝100選コレクション関数 =====
 let _unseenNewHim = new Set();
 let _unseenNewTakara = new Set();
+const _TAKARA_UNSEEN_KEY = "numaGuesserTakaraUnseen";
+// 永続化：起動時にlocalStorageから復元
+try{ JSON.parse(localStorage.getItem(_TAKARA_UNSEEN_KEY)||"[]").forEach(n=>_unseenNewTakara.add(n)); }catch(e){}
 function getTakaraCollection(){ try{ return JSON.parse(localStorage.getItem(_TAKARA_COL_KEY)||"[]"); }catch(e){ return []; } }
 function rankTakara(count){
   if(count>=100) return {label:"沼津の宝100選マスター",cls:"takara-rank-master"};
@@ -2604,6 +2608,7 @@ function showTakaraCollection(){
     grid.appendChild(cell);
   }
   _unseenNewTakara.clear();
+  try{ localStorage.removeItem(_TAKARA_UNSEEN_KEY); }catch(e){}
   ov.classList.add("show");
 }
 document.getElementById("takaraColSplashBtn").onclick=showTakaraCollection;
