@@ -527,6 +527,8 @@
     font-size:16px; padding:9px 18px; border-radius:22px; transition:all .15s;
   }
   .diff-btn.active { background:var(--sea-deep); color:#fff; }
+  .him-credit{ display:none; font-size:11px; font-weight:700; color:#8b0000; margin-top:4px; letter-spacing:0.3px; }
+  .splash.himonora-on .him-credit{ display:block; }
   .diff-note {
     font-size:13px; color:var(--ink); opacity:0.85; margin-top:10px; text-align:center;
   }
@@ -970,6 +972,7 @@
           <button class="diff-btn" id="diffHimonora">ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
+        <div class="him-credit">情報提供：リポップ</div>
         <button class="col-btn" id="colBtn">カードコレクションを見る</button>
       <button class="col-btn takara-col-btn" id="takaraColSplashBtn">ぬまづの宝100選図鑑を見る</button>
       </div>
@@ -2531,7 +2534,7 @@ function setDifficulty(d){
   if(d==="easy") note="中心部や港など、わかりやすい場所から出題します";
   else if(d==="hard") note="市内すみずみから出題（上級・制限時間30秒）";
   else if(d==="takara-hard") note="ぬまづの宝100選・制限時間30秒の超上級モード";
-  else if(d==="himonora") note="味確認生物ヒモノラが出現した場所を当てろ！100m以内で賞金GET、外れたらゲームオーバー（情報提供：リポップ）";
+  else if(d==="himonora") note="味確認生物ヒモノラが出現した場所を当てろ！100m以内で賞金GET、外れたらゲームオーバー";
   else note="ぬまづの宝100選だけを巡る、沼津の宝めぐりモード";
   document.getElementById("diffNote").textContent=note;
   // モードに応じて背景を切り替え
