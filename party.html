@@ -2546,9 +2546,13 @@ function setDifficulty(d){
   // 宝100選図鑑ボタン：takara/takara-hard のみ表示
   const _tcsb = document.getElementById("takaraColSplashBtn");
   if(_tcsb) _tcsb.style.display = (d==="takara"||d==="takara-hard") ? "block" : "none";
-  const _creditText = d==="himonora" ? "情報提供：リポップ" : "写真提供：沼津市";
-  const _cs=document.getElementById("photoCreditSplash"); if(_cs) _cs.textContent=_creditText;
-  const _cr=document.getElementById("photoCreditReveal"); if(_cr) _cr.textContent=_creditText;
+  const _isHim = d==="himonora";
+  const _creditText = _isHim ? "情報提供：リポップ" : "写真提供：沼津市";
+  const _creditColor = _isHim ? "#8b0000" : "rgba(255,255,255,0.7)";
+  const _cs=document.getElementById("photoCreditSplash");
+  if(_cs){ _cs.textContent=_creditText; _cs.style.color=_creditColor; _cs.style.textShadow=_isHim?"0 1px 2px rgba(255,255,255,0.6)":"0 1px 3px rgba(0,0,0,0.5)"; }
+  const _cr=document.getElementById("photoCreditReveal");
+  if(_cr){ _cr.textContent=_creditText; _cr.style.color=_isHim?"#8b0000":""; }
 }
 document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
 document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
