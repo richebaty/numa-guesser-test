@@ -843,7 +843,7 @@
       <div class="photo-reveal-cap" id="photoRevealCap"></div>
     </div>
     <div class="photo-reveal-tap">タップで すすむ</div>
-    <div class="photo-reveal-credit">写真提供：沼津市</div>
+    <div class="photo-reveal-credit" id="photoCreditReveal">写真提供：沼津市</div>
   </div>
 
   <!-- Round result -->
@@ -914,7 +914,7 @@
     <div class="takara-hard-bg" id="takaraHardBg"></div>
     <div class="takara-hard-credit" id="takaraHardCredit">元旦のびゅうおからの眺め</div>
     <div class="himonora-bg" id="himonoraBg"></div>
-    <div class="photo-credit-splash">写真提供：沼津市</div>
+    <div class="photo-credit-splash" id="photoCreditSplash">写真提供：沼津市</div>
     <div class="sun"></div>
     <div class="scape" id="scape">
       <svg class="scape-svg" viewBox="0 0 1200 360" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -2543,6 +2543,9 @@ function setDifficulty(d){
   // 宝100選図鑑ボタン：takara/takara-hard のみ表示
   const _tcsb = document.getElementById("takaraColSplashBtn");
   if(_tcsb) _tcsb.style.display = (d==="takara"||d==="takara-hard") ? "block" : "none";
+  const _creditText = d==="himonora" ? "情報提供：リポップ" : "写真提供：沼津市";
+  const _cs=document.getElementById("photoCreditSplash"); if(_cs) _cs.textContent=_creditText;
+  const _cr=document.getElementById("photoCreditReveal"); if(_cr) _cr.textContent=_creditText;
 }
 document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
 document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
