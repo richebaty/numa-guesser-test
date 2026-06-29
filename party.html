@@ -2547,6 +2547,8 @@ document.getElementById("diffTakaraHard").onclick=()=>setDifficulty("takara-hard
 document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 
 // ===== 宝100選コレクション関数 =====
+let _unseenNewHim = new Set();
+let _unseenNewTakara = new Set();
 function getTakaraCollection(){ try{ return JSON.parse(localStorage.getItem(_TAKARA_COL_KEY)||"[]"); }catch(e){ return []; } }
 function rankTakara(count){
   if(count>=100) return {label:"沼津の宝100選マスター",cls:"takara-rank-master"};
