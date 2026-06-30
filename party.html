@@ -353,6 +353,7 @@
     .splash { justify-content:center; }
     .splash-content { padding-bottom:0; }
     .takara-credit { font-size:22px; bottom:calc(var(--safe-b) + 28px); }
+    .takara-hard-credit { font-size:22px; bottom:calc(var(--safe-b) + 28px); }
     .sun { top:8%; width:110px; height:110px; }
     .fuji { bottom:30%; }
     .splash h1 { font-size:50px; }
@@ -1503,8 +1504,8 @@ function makeSeedIndices(){
 function findPanoAt(sv, anchor){
   // 宝100選は「すぐそば」を出したいので、専用のていねいな探索（50mから少しずつ拡大）
   if(anchor.takara){
-    // ユーザー投稿パノラマ：panoIdが指定されていれば直接そこを出題
-    if(anchor.panoId){
+    // CIHM以外の指定panoId → 直接使用（屋外の正確な場所を表示）
+    if(anchor.panoId && !anchor.panoId.startsWith("CIHM")){
       return Promise.resolve({
         panoId: anchor.panoId,
         pos: new google.maps.LatLng(anchor.lat, anchor.lng),
@@ -1512,6 +1513,7 @@ function findPanoAt(sv, anchor){
         heading: anchor.heading||0, pitch: anchor.pitch||0
       });
     }
+    // CIHMまたはpanoId未指定 → 座標から近くの屋外SVを探す（CIHMはsetPano不可）
     return new Promise((resolve)=>{
       const radii=[50,80,120,180,260,360]; // m。近いところから順に試す
       let i=0;
@@ -1526,7 +1528,7 @@ function findPanoAt(sv, anchor){
         }
         sv.getPanorama({location:{lat:anchor.lat,lng:anchor.lng}, radius:radii[i], source:google.maps.StreetViewSource.OUTDOOR},
           (data,status)=>{
-            if(status==="OK"){ resolve({panoId:data.location.pano,pos:data.location.latLng,hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null}); }
+            if(status==="OK"){ resolve({panoId:data.location.pano,pos:new google.maps.LatLng(anchor.lat,anchor.lng),hint:anchor.name,yomi:anchor.yomi,note:anchor.note||null,collectM:anchor.collectM||20}); }
             else { i++; tryNext(); }
           });
       };
@@ -2261,6 +2263,8 @@ function closeReview(){
 function restart(){
   myReview=[]; total=0; round=0;
   himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[]; himCompletedThisGame=false;
+  takaraNewThisGame=[];
+  _unseenNewTakara.clear(); try{ localStorage.setItem(_TAKARA_UNSEEN_KEY,"[]"); }catch(e){}
   const _fcb3=document.getElementById("finalColBtn"); if(_fcb3) _fcb3.style.display="none";
   buildRoundOrder();
   document.getElementById("totalScore").textContent="0";
@@ -2307,6 +2311,8 @@ async function begin(){
   isVersus=false;
   myReview=[]; total=0; round=0;
   himonoraRoundIdx=0; himonoraAlive=true;
+  takaraNewThisGame=[];
+  _unseenNewTakara.clear(); try{ localStorage.setItem(_TAKARA_UNSEEN_KEY,"[]"); }catch(e){}
   document.getElementById("oppbar").style.display="none";
   buildRoundOrder();
   document.getElementById("splash").classList.add("hide");
