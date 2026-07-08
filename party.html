@@ -2983,4 +2983,28 @@ document.getElementById("shareBtn").onclick=async ()=>{
     try{ await navigator.share({ text:text }); }
     catch(e){ /* キャンセル時は何もしない */ }
   } else {
-    // 共有メニューが使えない端末（多くのPC）はコ
+    // 共有メニューが使えない端末（多くのPC）はコピーで代替
+    try{ await navigator.clipboard.writeText(text); flashShareNote("文面をコピーしました。LINEなどに貼り付けて送ってください"); }
+    catch(e){ flashShareNote("この端末では共有できません。合言葉を手で伝えてください"); }
+  }
+};
+document.getElementById("copyBtn").onclick=async ()=>{
+  try{ await navigator.clipboard.writeText(inviteMessage()); flashShareNote("文面をコピーしました！"); }
+  catch(e){ flashShareNote("コピーできませんでした。合言葉を手で伝えてください"); }
+};
+document.getElementById("handleRow").onclick=toggleExpand;
+checkPublishPeriod();
+// 招待リンク（?join=合言葉）で開かれたら、参加画面を自動で開いて合言葉を入れておく
+(function autoJoinFromLink(){
+  try{
+    const params=new URLSearchParams(location.search);
+    const code=(params.get("join")||"").trim().toUpperCase();
+    if(code && code.length>=1 && code.length<=4){
+      // スプラッシュのボタン群を飛ばして、参加ボックスを開く
+      showJoin(code);
+    }
+  }catch(e){ /* 何もしない（通常起動） */ }
+})();
+</script>
+</body>
+</html>
