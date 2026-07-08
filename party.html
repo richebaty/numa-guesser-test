@@ -287,7 +287,7 @@
   }
   .splash.takara-on .takara-bg{ opacity:1; }
   .takara-credit{
-    position:absolute; left:0; right:0; z-index:61;
+    position:fixed; left:0; right:0; z-index:61;
     bottom:calc(var(--safe-b) + 18px); text-align:center;
     color:rgba(255,255,255,0.95); font-size:15px; letter-spacing:1px; font-weight:600;
     text-shadow:0 1px 4px rgba(0,0,0,0.55);
@@ -309,7 +309,7 @@
   }
   .splash.takara-hard-on .takara-hard-bg{ opacity:1; }
   .takara-hard-credit{
-    position:absolute; left:0; right:0; z-index:61;
+    position:fixed; left:0; right:0; z-index:61;
     bottom:calc(var(--safe-b) + 18px); text-align:center;
     color:rgba(255,255,255,0.95); font-size:15px; letter-spacing:1px; font-weight:600;
     text-shadow:0 1px 4px rgba(0,0,0,0.65);
@@ -408,7 +408,7 @@
   .splash.hide { display:none; }
   /* sun */
   .sun {
-    position:absolute; top:11%; left:24%; transform:translateX(-50%);
+    position:fixed; top:11%; left:24%; transform:translateX(-50%);
     width:90px; height:90px; border-radius:50%;
     background:radial-gradient(circle at 50% 50%, #fff3d6, #ffd98a 70%, #ffcf6e);
     box-shadow:0 0 60px 18px rgba(255,221,150,0.6);
@@ -419,7 +419,7 @@
   .fuji { display:none; }
   /* 沼津港のシンボル「びゅうお」水門（右側）。両側の塔＋上部の展望回廊。 */
   .byuo {
-    position:absolute; right:14%; bottom:37%; width:96px; height:118px;
+    position:fixed; right:14%; bottom:37%; width:96px; height:118px;
     filter:drop-shadow(0 6px 10px rgba(0,0,0,0.12)); z-index:3;
   }
   .byuo .tower {
@@ -441,7 +441,7 @@
   }
   /* 港の街並みシルエット（びゅうおの足元） */
   .town {
-    position:absolute; right:2%; bottom:38%; display:flex; align-items:flex-end; gap:3px; z-index:2; opacity:.92;
+    position:fixed; right:2%; bottom:38%; display:flex; align-items:flex-end; gap:3px; z-index:2; opacity:.92;
   }
   .town span { display:block; width:15px; border-radius:2px 2px 0 0; }
   .town .b1{height:40px;background:#e8895a;} .town .b2{height:56px;background:#e0b94a;} .town .b3{height:32px;background:#5fa8c9;}
@@ -449,11 +449,11 @@
   .town .b6{height:36px;background:#7b9ed6;} .town .b7{height:50px;width:16px;background:#e6a23c;} .town .b8{height:30px;background:#cf6f8f;}
   /* sea */
   .sea-band {
-    position:absolute; bottom:0; left:0; right:0; height:38%;
+    position:fixed; bottom:0; left:0; right:0; height:38%;
     background:linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
   }
   .wave {
-    position:absolute; left:0; right:0; height:22px;
+    position:fixed; left:0; right:0; height:22px;
     background:radial-gradient(circle at 12px -6px, transparent 12px, var(--paper) 13px) repeat-x;
     background-size:24px 22px; opacity:.25;
   }
@@ -461,11 +461,11 @@
   .wave.w2 { bottom:32%; opacity:.15; animation:drift 9s linear infinite reverse; }
   @keyframes drift { from{background-position:0 0} to{background-position:48px 0} }
   /* little boat */
-  .boat { position:absolute; bottom:30%; font-size:46px; animation:sail 6.5s ease-in-out infinite; z-index:4; }
+  .boat { position:fixed; bottom:30%; font-size:46px; animation:sail 6.5s ease-in-out infinite; z-index:4; }
   @keyframes sail { 0%{left:-12%} 100%{left:108%} }
-  .scape{ position:absolute; left:0; right:0; bottom:37%; height:54%; z-index:1; pointer-events:none; }
+  .scape{ position:fixed; left:0; right:0; bottom:37%; height:54%; z-index:1; pointer-events:none; }
   .scape-svg{ position:absolute; left:0; right:0; bottom:0; width:100%; height:100%; }
-  .fboat{ position:absolute; bottom:26%; opacity:0; white-space:nowrap; z-index:4; transform:scale(1.35); }
+  .fboat{ position:fixed; bottom:26%; opacity:0; white-space:nowrap; z-index:4; transform:scale(1.35); }
   .fboat.fb1{ animation:sailF1 9s linear infinite; }
   .fboat.fb2{ animation:sailF2 12s linear infinite; bottom:18%; transform:scale(1.7); }
   @keyframes sailF1 { 0%{left:108%} 100%{left:-14%} }
@@ -477,7 +477,7 @@
   .splash.hard-on .byuo .deck{ background:#f6d4c8; border-color:#c98f86; }
   .splash.hard-on .byuo .gate{ background:#eec0b4; border-color:#c98f86; }
   /* カモメの群れ（むずかしいモード）：横に流れつつ上下 */
-  .gulls{ position:absolute; top:12%; left:0; width:100%; height:42%; z-index:4; opacity:0; pointer-events:none; }
+  .gulls{ position:fixed; top:12%; left:0; width:100%; height:42%; z-index:4; opacity:0; pointer-events:none; }
   .splash.hard-on .gulls{ opacity:1; transition:opacity .6s; animation:gullFlock 12s linear infinite, gullBob 2.2s ease-in-out infinite; }
   @keyframes gullFlock{ 0%{margin-left:-15%} 100%{margin-left:115%} }
   @keyframes gullBob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
@@ -500,9 +500,9 @@
   .gull.g11{ left:47%; top:46%; transform:scale(0.75);}
   .gull.g12{ left:52%; top:20%; transform:scale(0.9); }
   /* pine */
-  .pinewood{ position:absolute; left:0; bottom:37%; width:62%; height:26px; z-index:2; background:radial-gradient(circle at 8px 0, #5e8466 9px, transparent 10px) repeat-x; background-size:18px 26px; filter:drop-shadow(0 3px 3px rgba(0,0,0,.15)); }
+  .pinewood{ position:fixed; left:0; bottom:37%; width:62%; height:26px; z-index:2; background:radial-gradient(circle at 8px 0, #5e8466 9px, transparent 10px) repeat-x; background-size:18px 26px; filter:drop-shadow(0 3px 3px rgba(0,0,0,.15)); }
   .pinewood::after{ content:""; position:absolute; left:0; bottom:-6px; width:100%; height:10px; background:#587e5f; }
-  .pine { position:absolute; bottom:38%; font-size:30px; filter:drop-shadow(0 4px 4px rgba(0,0,0,.15)); z-index:2; }
+  .pine { position:fixed; bottom:38%; font-size:30px; filter:drop-shadow(0 4px 4px rgba(0,0,0,.15)); z-index:2; }
   .pine.p1 { left:8%; } .pine.p2 { left:34%; font-size:26px; bottom:38%; }
 
   .splash-content {
@@ -581,7 +581,7 @@
     text-shadow:0 1px 3px rgba(0,0,0,0.6); pointer-events:none;
   }
   .photo-credit-splash{
-    position:absolute; right:12px; bottom:calc(var(--safe-b) + 8px); z-index:61;
+    position:fixed; right:12px; bottom:calc(var(--safe-b) + 8px); z-index:61;
     color:rgba(255,255,255,0.7); font-size:10px; letter-spacing:0.5px;
     text-shadow:0 1px 3px rgba(0,0,0,0.5); pointer-events:none;
   }
