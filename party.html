@@ -999,6 +999,7 @@
           <button class="diff-btn" id="diffHard">むずかしい</button>
           <button class="diff-btn" id="diffTakara">ぬまづの宝100選</button>
           <button class="diff-btn" id="diffTakaraHard">宝100選ハード</button>
+          <button class="diff-btn" id="diffTakaraMarathon">🏃宝100選マラソン</button>
           <button class="diff-btn" id="diffHimonora">ヒモノラを探せ！</button>
         </div>
         <div class="diff-note" id="diffNote">中心部や港など、わかりやすい場所から出題します</div>
@@ -1457,6 +1458,7 @@ const TANKA = [
 
 let map, pano, geocoder, marker, apiKey="";
 let target=null, guessLatLng=null, round=0, total=0;
+let marathonGotTreasure=false; // マラソンモード：この問でお宝ゲットできたか
 let roundOrder=[]; // 各巡で使うエリアの並び（全域まんべんなく）
 let difficulty="easy"; // "easy"=やさしい(中心部中心) / "hard"=むずかしい(全域)
 // 難易度に応じた出題エリアのプールを返す
@@ -1497,6 +1499,9 @@ const TAKARA_PER_GAME = 2;
 function composeRoundAnchors(){
   if(difficulty==="himonora") return shuffle(HIMONORA_ANCHORS.slice());
   // 宝100選モード：5問すべて宝から出す
+  if(difficulty==="takara-marathon"){
+    return shuffle(TAKARA_ANCHORS.slice()); // 全100問シャッフル
+  }
   if(difficulty==="takara" || difficulty==="takara-hard"){
     let t=shuffle(TAKARA_ANCHORS.slice());
     while(t.length<MAX_ROUNDS){ t=t.concat(shuffle(TAKARA_ANCHORS.slice())); }
@@ -1598,6 +1603,7 @@ function updateTimerUI(){
 // 難易度ごとの制限時間（むずかしい・宝100選ハードは30秒）
 function roundSeconds(){
   if(difficulty==="himonora") return 60;
+  if(difficulty==="takara-marathon") return 60;
   return (difficulty==="hard" || difficulty==="takara-hard") ? 30 : ROUND_SECONDS;
 }
 function startTimer(){
@@ -1621,7 +1627,7 @@ async function startRound(){
   guessLatLng=null;
   stopTimer();
   document.getElementById("guessBtn").disabled=true;
-  document.getElementById("roundLabel").innerHTML=difficulty==="himonora"?`ヒモノラを探せ！第${round}問`:`第${round}問 / 全${MAX_ROUNDS}問`;
+  document.getElementById("roundLabel").innerHTML=difficulty==="himonora"?`ヒモノラを探せ！第${round}問`:difficulty==="takara-marathon"?`🏃 マラソン 第${round}問`:`第${round}問 / 全${MAX_ROUNDS}問`;
   document.getElementById("handleLabel").textContent="地図でこたえる";
   if(marker){ marker.setMap(null); marker=null; }
   const _ha=document.getElementById("himonoraArea"); if(_ha) _ha.style.display="none";
@@ -1785,6 +1791,10 @@ function submitGuess(fromTimer=false, noAnswer=false){
       tn.style.display="none";
     }
   }
+  // マラソンモード：お宝ゲット判定
+  if(difficulty==="takara-marathon"){
+    marathonGotTreasure = (target.takaraNo && km !== null && km * 1000 <= (target.collectM||TAKARA_COLLECT_M));
+  }
   // 宝100選コレクション判定（ヒモノラモード以外、20m以内）
   if(difficulty!=="himonora" && target.takaraNo && km !== null && km * 1000 <= (target.collectM||TAKARA_COLLECT_M)){
     const tno = target.takaraNo;
@@ -1817,6 +1827,8 @@ function submitGuess(fromTimer=false, noAnswer=false){
   }
   document.getElementById("nextBtn").textContent = difficulty==="himonora"
     ? (himonoraAlive ? "次の獲物へ →" : "結果を見る →")
+    : difficulty==="takara-marathon"
+    ? (marathonGotTreasure ? (round>=TAKARA_ANCHORS.length ? "全問クリア！結果を見る 🎉" : "次の問題へ →") : "ゲームオーバー →")
     : (round>=MAX_ROUNDS ? "結果を見る →" : "次の問題へ →");
 
   if(!isVersus){
@@ -1958,6 +1970,11 @@ function next(){
     }
     return;
   }
+  if(difficulty==="takara-marathon"){
+    if(!marathonGotTreasure || round>=TAKARA_ANCHORS.length) showFinal();
+    else startRound();
+    return;
+  }
   if(!isVersus){
     if(round>=MAX_ROUNDS) showFinal(); else startRound();
     return;
@@ -2056,6 +2073,45 @@ function rankRuby(pct){
   return '<ruby>'+escapeHtml(r.name)+'<rt>'+escapeHtml(r.yomi)+'</rt></ruby>';
 }
 function showFinal(){
+  if(difficulty==="takara-marathon"){
+    const correctCount = marathonGotTreasure ? round : round-1;
+    const allClear = marathonGotTreasure && round>=TAKARA_ANCHORS.length;
+    const _seal=document.getElementById("finalSeal");
+    if(_seal) _seal.textContent=allClear?"🏆":correctCount===0?"😢":"🏃";
+    const _fh2=document.getElementById("finalOverlay").querySelector("h2");
+    if(_fh2) _fh2.textContent=allClear?"全問クリア！":"マラソン 結果";
+    document.getElementById("finalScore").textContent=total.toLocaleString()+"点";
+    const sl=document.getElementById("finalScoreLabel"); if(sl) sl.textContent="獲得点";
+    document.getElementById("finalRank").textContent=correctCount+"問";
+    const rl=document.getElementById("finalRankLabel"); if(rl) rl.textContent="連続正解";
+    document.getElementById("finalTanka").textContent=allClear?"宝100選を全制覇！沼津マスター！":correctCount===0?"次はお宝をゲットしよう！":correctCount<10?"もう少し！再挑戦！":correctCount<50?"なかなかの健脚！":"すごい記録！";
+    document.getElementById("finalVsRow").style.display="none";
+    document.getElementById("finalVerdict").style.display="none";
+    document.getElementById("finalBoard").style.display="none";
+    document.getElementById("restartBtn").style.display="";
+    const rb=document.getElementById("reviewBtn"); if(rb) rb.style.display="none";
+    // 宝100選図鑑ボタン
+    const _tfcb=document.getElementById("takaraFinalColBtn");
+    if(_tfcb){
+      const _tcol=getTakaraCollection();
+      _tfcb.style.display=(_tcol.length>0||takaraNewThisGame.length>0)?"":"none";
+      if(takaraNewThisGame.length>0){
+        const _existing=document.getElementById("takaraBanner");
+        if(!_existing){
+          const _banner=document.createElement("div");
+          _banner.id="takaraBanner"; _banner.className="takara-new-banner";
+          const _rk=rankTakara(_tcol.length);
+          _banner.innerHTML="お宝 "+takaraNewThisGame.length+" 個をゲットしました！"+(_rk?'<span class="takara-rank-badge '+_rk.cls+'" style="font-size:11px;padding:2px 10px;">'+escapeHtml(_rk.label)+'</span>':"");
+          _tfcb.parentNode.insertBefore(_banner,_tfcb);
+        }
+        takaraNewThisGame=[];
+      }
+    }
+    const _fcb2=document.getElementById("finalColBtn"); if(_fcb2) _fcb2.style.display="none";
+    showBestScore();
+    document.getElementById("finalOverlay").classList.add("show");
+    return;
+  }
   if(difficulty==="himonora"){
     const successRounds=himonoraAlive?round:round-1;
     document.getElementById("finalScore").textContent="¥"+total.toLocaleString()+"円";
@@ -2194,7 +2250,7 @@ function showBestScore(){
   const bestRow=document.getElementById("bestRow");
   const bestText=document.getElementById("bestText");
   if(!bestRow||!bestText) return;
-  const modeLabel={"easy":"やさしい","hard":"むずかしい","takara":"ぬまづの宝100選","takara-hard":"宝100選ハード","himonora":"ヒモノラを探せ！"}[difficulty||"easy"]||"やさしい";
+  const modeLabel={"easy":"やさしい","hard":"むずかしい","takara":"ぬまづの宝100選","takara-hard":"宝100選ハード","takara-marathon":"宝100選マラソン","himonora":"ヒモノラを探せ！"}[difficulty||"easy"]||"やさしい";
   let prev=0, isNew=false;
   try{
     const bestKey="numaguesser_best_"+(difficulty||"easy");
@@ -2294,7 +2350,7 @@ function closeReview(){
 function restart(){
   myReview=[]; total=0; round=0;
   himonoraRoundIdx=0; himonoraAlive=true; himNewCardsThisGame=[]; himCompletedThisGame=false;
-  takaraNewThisGame=[];
+  takaraNewThisGame=[]; marathonGotTreasure=false;
   _unseenNewTakara.clear(); try{ localStorage.setItem(_TAKARA_UNSEEN_KEY,"[]"); }catch(e){}
   const _fcb3=document.getElementById("finalColBtn"); if(_fcb3) _fcb3.style.display="none";
   buildRoundOrder();
@@ -2342,7 +2398,7 @@ async function begin(){
   isVersus=false;
   myReview=[]; total=0; round=0;
   himonoraRoundIdx=0; himonoraAlive=true;
-  takaraNewThisGame=[];
+  takaraNewThisGame=[]; marathonGotTreasure=false;
   _unseenNewTakara.clear(); try{ localStorage.setItem(_TAKARA_UNSEEN_KEY,"[]"); }catch(e){}
   document.getElementById("oppbar").style.display="none";
   buildRoundOrder();
@@ -2563,23 +2619,25 @@ function setDifficulty(d){
   document.getElementById("diffHard").classList.toggle("active", d==="hard");
   document.getElementById("diffTakara").classList.toggle("active", d==="takara");
   document.getElementById("diffTakaraHard").classList.toggle("active", d==="takara-hard");
+  document.getElementById("diffTakaraMarathon").classList.toggle("active", d==="takara-marathon");
   document.getElementById("diffHimonora").classList.toggle("active", d==="himonora");
   let note;
   if(d==="easy") note="中心部や港など、わかりやすい場所から出題します";
   else if(d==="hard") note="市内すみずみから出題（上級・制限時間30秒）";
   else if(d==="takara-hard") note="ぬまづの宝100選・制限時間30秒の超上級モード";
+  else if(d==="takara-marathon") note="お宝をゲットし続ける限り終わらない！外れたら即ゲームオーバー（制限時間60秒）";
   else if(d==="himonora") note="味確認生物ヒモノラが出現した場所を当てろ！100m以内で賞金GET、外れたらゲームオーバー";
   else note="ぬまづの宝100選だけを巡る、沼津の宝めぐりモード";
   document.getElementById("diffNote").textContent=note;
   // モードに応じて背景を切り替え
   const sp=document.getElementById("splash");
-  if(sp) sp.classList.toggle("takara-on", d==="takara");
+  if(sp) sp.classList.toggle("takara-on", d==="takara"||d==="takara-marathon");
   if(sp) sp.classList.toggle("takara-hard-on", d==="takara-hard");
   if(sp) sp.classList.toggle("hard-on", d==="hard");
   if(sp) sp.classList.toggle("himonora-on", d==="himonora");
   // 宝100選図鑑ボタン：takara/takara-hard のみ表示
   const _tcsb = document.getElementById("takaraColSplashBtn");
-  if(_tcsb) _tcsb.style.display = (d==="takara"||d==="takara-hard") ? "block" : "none";
+  if(_tcsb) _tcsb.style.display = (d==="takara"||d==="takara-hard"||d==="takara-marathon") ? "block" : "none";
   const _isHim = d==="himonora";
   const _creditText = _isHim ? "情報提供：リポップ" : "写真提供：沼津市";
   const _creditColor = _isHim ? "#8b0000" : "rgba(255,255,255,0.7)";
@@ -2592,6 +2650,7 @@ document.getElementById("diffEasy").onclick=()=>setDifficulty("easy");
 document.getElementById("diffHard").onclick=()=>setDifficulty("hard");
 document.getElementById("diffTakara").onclick=()=>setDifficulty("takara");
 document.getElementById("diffTakaraHard").onclick=()=>setDifficulty("takara-hard");
+document.getElementById("diffTakaraMarathon").onclick=()=>setDifficulty("takara-marathon");
 document.getElementById("diffHimonora").onclick=()=>setDifficulty("himonora");
 
 // ===== 宝100選コレクション関数 =====
