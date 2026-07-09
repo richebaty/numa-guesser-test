@@ -2654,7 +2654,7 @@ function setDifficulty(d){
   document.getElementById("diffNote").textContent=note;
   // モードに応じて背景を切り替え
   const sp=document.getElementById("splash");
-  if(sp) sp.classList.toggle("takara-on", d==="takara"||d==="takara-marathon");
+  if(sp) sp.classList.toggle("takara-on", d==="takara");
   if(sp) sp.classList.toggle("takara-hard-on", d==="takara-hard");
   if(sp) sp.classList.toggle("marathon-on", d==="takara-marathon");
   if(sp) sp.classList.toggle("hard-on", d==="hard");
